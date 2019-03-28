@@ -1,0 +1,8 @@
+{
+	"guid": "zeus-applications-java",
+	"repository": {
+		"type": "git",
+		"branch": "master",
+		"url": "https://github.com/dirigiblelabs/zeus-v3-java.git"
+	}
+}

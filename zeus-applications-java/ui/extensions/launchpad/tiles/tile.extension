@@ -1,0 +1,5 @@
+{
+	"description": "Java Applications Tile in Launchpad",
+	"extensionPoint": "launchpad-zeus-tiles",
+	"module": "zeus-applications-java/ui/extensions/launchpad/tiles/tile.js"
+}

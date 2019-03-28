@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="page">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="">
+	<meta name="author" content="">
+
+	<link type="text/css" rel="stylesheet" href="../../../../../../../../services/v3/core/theme/bootstrap.min.css">
+	<link type="text/css" rel="stylesheet" href="../../../../../../../../services/v3/web/resources/font-awesome-4.7.0/css/font-awesome.min.css">
+	<link type="image/png" rel="shortcut icon" href="../../../../../../../../services/v3/web/resources/images/favicon.png" />
+</head>
+
+<body ng-controller="PageController as pageCtrl">
+	<div class="page-header container">
+		<h1>Java WAR Applications</h1>
+	</div>
+	<div class="container">
+		<button type="button" ng-click="pageCtrl.openNewDialog()" class="btn btn-lg btn-primary pull-right">New</button>
+		<table class="table table-striped table-hover product-table">
+			<thead>
+				<tr>
+					<th class="text-capitalize">Name</th>
+					<th class="text-capitalize">WAR File</th>
+					<th class="text-capitalize">Docker Image</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="next in pageCtrl.data">
+					<td>{{next.name}}</td>
+					<td>{{next.war}}</td>
+					<td>{{next.docker}}</td>
+					<td>
+						<i class="close fa fa-remove" ng-click="pageCtrl.openDeleteDialog(next)" style="font-size: 1.4em"></i>
+						<i class="close fa fa-bars" ng-click="pageCtrl.openEditDialog(next)" style="margin-right: 0.5em; font-size: 1.4em"></i>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="modal fade" id="entityModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 ng-show="pageCtrl.actionType === 'new'" class="modal-title" id="createEntityLbl">Create entity</h3>
+					<h3 ng-show="pageCtrl.actionType === 'update'" class="modal-title" id="updateEntityLbl">Update entity</h3>
+					<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete entity</h3>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<form ng-hide="pageCtrl.actionType === 'delete'">
+						<div class="form-group">
+							<label>Name</label>
+							<input type="text" class="form-control" placeholder="Enter name" ng-model="pageCtrl.entity.name">
+						</div>
+						<div class="form-group">
+							<label>WAR File</label>
+							<input type="text" class="form-control" placeholder="https://github.com/organization/repository.git" ng-model="pageCtrl.entity.gitrepo">
+						</div>
+						<div class="form-group">
+							<label>Docker Image</label>
+							<input type="text" class="form-control" placeholder="master" ng-model="pageCtrl.entity.gitbranch">
+						</div>
+					</form>
+					<div ng-show="pageCtrl.actionType === 'delete'">
+						You are going to <b>delete</b> Java Application <b>{{pageCtrl.entity.name}}</b>.
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'new'" ng-click="pageCtrl.create()">Save</button>
+					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'update'" ng-click="pageCtrl.update()">Update</button>
+					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'delete'" ng-click="pageCtrl.delete()">Delete</button>
+					<button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<nav class="text-center">
+	    <ul class="pagination">
+	        <li class="page-item" ng-click="previousPage()" ng-class="{disabled: dataPage == 1 ||  dataPage == dataPages}">
+	            <a class="page-link" href="#" aria-label="Previous">
+	                <span aria-hidden="true">&laquo;</span>
+	                <span class="sr-only">Previous</span>
+	            </a>
+	        </li>
+	        <li class="page-item" ng-repeat="next in pageCtrl.getPages() track by $index" ng-click="pageCtrl.loadPage($index + 1)" ng-class="{active: $index + 1 == dataPage, disabled: dataPage == dataPages}"><a class="page-link" href="#">{{$index + 1}}</a></li>
+	        <li class="page-item" ng-click="nextPage()" ng-class="{disabled: dataPage == dataPages}">
+	            <a class="page-link" href="#" aria-label="Next">
+	                <span aria-hidden="true">&raquo;</span>
+	                <span class="sr-only">Next</span>
+	            </a>
+	        </li>
+	    </ul>
+	</nav>
+
+	<script type="text/javascript" src="../../../../../../../../services/v3/web/resources/jquery/2.0.3/jquery.min.js"></script>
+	<script type="text/javascript" src="../../../../../../../../services/v3/web/resources/bootstrap/3.3.7/bootstrap.min.js" async></script>
+	<script type="text/javascript" src="../../../../../../../../services/v3/web/resources/angular/1.4.7/angular.min.js"></script>
+	<script type="text/javascript" src="../../../../../../../../services/v3/web/resources/angular/1.4.7/angular-resource.min.js"></script>
+	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/message-hub.js"></script>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular-animate.min.js"></script>
+	<script type="text/javascript" src="https://angular-ui.github.io/bootstrap/ui-bootstrap-tpls-0.14.3.js"></script>
+	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-layout.js"></script>
+	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-core-ng-modules.js"></script>
+
+	<script type="text/javascript" src="js/ng-rs-data.js"></script>
+	<script type="text/javascript" src="js/controller.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+{
+    "schema": {
+        "structures": [
+            {
+                "name": "ZEUS_APPLICATIONS_JAVA",
+                "type": "TABLE",
+                "columns": [
+                    {
+                        "name": "APPLICATION_ID",
+                        "type": "INTEGER",
+                        "length": 0,
+                        "nullable": true,
+                        "primaryKey": "true",
+                        "identity": "true",
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APPLICATION_NAME",
+                        "type": "VARCHAR",
+                        "length": "128",
+                        "nullable": true,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APPLICATION_WAR",
+                        "type": "VARCHAR",
+                        "length": "1024",
+                        "nullable": false,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APPLICATION_DOCKER_IMAGE",
+                        "type": "VARCHAR",
+                        "length": "1024",
+                        "nullable": true,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -1,4 +1,4 @@
-angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap'])
+angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUpload'])
 .config(["messageHubProvider", function(messageHubProvider) {
 	messageHubProvider.evtNamePrefix = 'zeus.Explore.Java';
 }])    
@@ -15,12 +15,16 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap'])
 .config(["EntityProvider", function(entityProvider) {
   entityProvider.config.apiEndpoint = '../../../../../../../../services/v3/js/zeus-applications-java/api/applications.js';
 }])
-.controller('PageController', ['Entity', '$messageHub', '$q', function (Entity, $messageHub, $q) {
+.controller('PageController', ['Entity', '$messageHub', '$q', 'FileUploader', function (Entity, $messageHub, $q, FileUploader) {
 
     this.dataPage = 1;
     this.dataCount = 0;
     this.dataOffset = 0;
     this.dataLimit = 10;
+	var uploader = this.uploader = new FileUploader({
+		url: '../../../../../../../../services/v3/js/zeus-applications-java/api/wars.js',
+		autoUpload: true
+	});
 
     this.getPages = function () {
         return new Array(this.dataPages);
@@ -39,21 +43,18 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap'])
     };
 
     this.loadPage = function () {
-        var deferred = $q.defer();
-        Entity.query({
-            $limit: this.dataLimit,
-            $offset: (this.dataPage - 1) * this.dataLimit
-        }).$promise
-            .then(function (data) {
+        return Entity.query({
+	            $limit: this.dataLimit,
+	            $offset: (this.dataPage - 1) * this.dataLimit
+	        }).$promise
+	        .then(function (data) {
                 this.dataCount = data.$count;
                 this.dataPages = Math.ceil(this.dataCount / this.dataLimit);
                 this.data = data;
             }.bind(this))
             .catch(function (error) {
-                deferred.resolve(error);
+                //TODO
             });
-
-        return deferred.promise;
     };
 
     this.openNewDialog = function () {
@@ -78,54 +79,76 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap'])
         this.loadPage(this.dataPage);
         toggleEntityModal();
     };
+    
+    uploader.onSuccessItem = function(item, response, status, headers) {
+    	this.errors = "";
+    	this.entity.warFilePath = headers.location;
+    }.bind(this);
+
+	uploader.onErrorItem = function(item /*, response, status, headers*/){
+		this.errors = "Upload failed for " + item.file.name;
+		uploader.cancelAll();
+	}.bind(this);
+
 
     this.create = function () {
-    	var deferred = $q.defer();
-    	Entity.save({id: this.entity.id}, this.entity).$promise
-    	.then(function () {
-                this.loadPage(this.dataPage);
-                toggleEntityModal();
-                $messageHub.messageEntityModified();
-            }.bind(this))
-        .catch(function (removeErr) {
-            deferred.reject(removeErr);
+	  return Entity.save({id: this.entity.id}, this.entity).$promise
+	 	.then(function () {
+            this.loadPage(this.dataPage);
+            $messageHub.messageEntityModified();
+            toggleEntityModal();
+        }.bind(this))
+        .catch(function (err) {
+        	this.errors = 'Saving failed';
         });
-   		return deferred.promise;
     };
 
     this.update = function () {
-    	var deferred = $q.defer();
-    	Entity.update({id: this.entity.id}, this.entity).$promise
+    	return Entity.update({id: this.entity.id}, this.entity).$promise
     		.then(function(){
 	    		this.loadPage(this.dataPage);
 	            toggleEntityModal();
 	            $messageHub.messageEntityModified();
 	    	}.bind(this))
-	    	.catch(function(removeErr) {
-	            deferred.reject(removeErr);
+	    	.catch(function(err) {
+	            //TODO
 	        });
-	    return deferred.promise;
     };
 
     this.delete = function () {
-		var deferred = $q.defer();
-		Entity.remove({id: this.entity.id}).$promise
+		return Entity.remove({id: this.entity.id})
     	.then(function(){
 				this.loadPage(this.dataPage);
                 toggleEntityModal();
                 $messageHub.messageEntityModified();
 			}.bind(this))
-		.catch(function(removeErr){
-				deferred.reject(removeErr);
+		.catch(function(err){
+				//TODO
 			});
-		return deferred.promise;
     };
 
     $messageHub.onEntityRefresh(this.loadPage);
 
     function toggleEntityModal() {
         $('#entityModal').modal('toggle');
+        this.errors = '';
     }
     
     this.loadPage(this.dataPage)
-}]);
+}])
+.directive('fileReader', function($q) {
+    var slice = Array.prototype.slice;
+
+    return {
+        restrict: 'A',
+        require: '?ngModel',
+        link: function(scope, element, attrs, ngModel) {
+                if (!ngModel) return;
+                element.bind('change', function(e) {
+                    var element = e.target;
+					ngModel.$setViewValue(element.files);
+                }); //change
+
+            } //link
+    }; //return
+});;

@@ -53,6 +53,7 @@ angular.module('ngRsData', ['ngResource'])
     var config = this.config = {};
     this.$get = ['$resource', 'ResourceSvcConfiguration', function ($resource, ResourceSvcConfiguration) {
 		var cfg = angular.copy(ResourceSvcConfiguration.cfg);
+		cfg = angular.merge(cfg, config);
         return $resource(config.apiEndpoint + '/:id', { id: '@id' }, cfg);
     }];
 })

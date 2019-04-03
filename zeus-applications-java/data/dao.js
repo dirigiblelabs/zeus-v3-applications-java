@@ -4,25 +4,40 @@ exports.create = function(){
 		"properties": [
 			{
 				name: "id",
-				column: "APPLICATIONS_ID",
+				column: "APP00J_ID",
 				id: true,
 				required: true,
 				type: "BIGINT"
 			},{
 				name: "name",
-				column: "APPLICATIONS_NAME",
+				column: "APP00J_NAME",
 				type: "VARCHAR",
-				size: 126
+				size: 256
 			},{
-				name: "gitrepo",
-				column: "APPLICATIONS_WAR",
+				name: "user",
+				column: "APP00J_USER",
+				type: "VARCHAR",
+				size: 256
+			},{
+				name: "uploadTime",
+				column: "APP00J_UPLOAD_TIME",
+				type: "BIGINT",
+				dbValue: function(uploadTime){
+					return uploadTime !== undefined ? new Date(uploadTime).getTime() : null;
+				},
+				value: function(dbValue){
+					return dbValue !== null ? new Date(dbValue).toISOString() : undefined;
+				}
+			},{
+				name: "warFilePath",
+				column: "APP00J_WAR_FPATH",
 				type: "VARCHAR",
 				size: 1024
 			},{
-				name: "gitbranch",
-				column: "APPLICATIONS_DOCKER_IMAGE",
+				name: "dockerFilePath",
+				column: "APP00J_DOCKER_IMAGE_FPATH",
 				type: "VARCHAR",
-				size: 126
+				size: 1024
 			}]
-		}, 'HTML5DAO');
+		});
 }

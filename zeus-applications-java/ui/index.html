@@ -14,7 +14,7 @@
 
 <body ng-controller="PageController as pageCtrl">
 	<div class="page-header container">
-		<h1>Java WAR Applications</h1>
+		<h1>Java Web Applications</h1>
 	</div>
 	<div class="container">
 		<button type="button" ng-click="pageCtrl.openNewDialog()" class="btn btn-lg btn-primary pull-right">New</button>
@@ -22,16 +22,14 @@
 			<thead>
 				<tr>
 					<th class="text-capitalize">Name</th>
-					<th class="text-capitalize">WAR File</th>
-					<th class="text-capitalize">Docker Image</th>
+					<th class="text-capitalize">Date Created</th>
 					<th></th>
 				</tr>
 			</thead>
 			<tbody>
 				<tr ng-repeat="next in pageCtrl.data">
 					<td>{{next.name}}</td>
-					<td>{{next.war}}</td>
-					<td>{{next.docker}}</td>
+					<td>{{next.uploadTime}}</td>
 					<td>
 						<i class="close fa fa-remove" ng-click="pageCtrl.openDeleteDialog(next)" style="font-size: 1.4em"></i>
 						<i class="close fa fa-bars" ng-click="pageCtrl.openEditDialog(next)" style="margin-right: 0.5em; font-size: 1.4em"></i>
@@ -45,9 +43,9 @@
 		<div class="modal-dialog" role="document">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h3 ng-show="pageCtrl.actionType === 'new'" class="modal-title" id="createEntityLbl">Create entity</h3>
-					<h3 ng-show="pageCtrl.actionType === 'update'" class="modal-title" id="updateEntityLbl">Update entity</h3>
-					<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete entity</h3>
+					<h3 ng-show="pageCtrl.actionType === 'new'" class="modal-title" id="createEntityLbl">Create Java Web Application</h3>
+					<h3 ng-show="pageCtrl.actionType === 'update'" class="modal-title" id="updateEntityLbl">Update Java Web Application</h3>
+					<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete Java Web Application</h3>
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 						<span aria-hidden="true">&times;</span>
 					</button>
@@ -56,15 +54,19 @@
 					<form ng-hide="pageCtrl.actionType === 'delete'">
 						<div class="form-group">
 							<label>Name</label>
-							<input type="text" class="form-control" placeholder="Enter name" ng-model="pageCtrl.entity.name">
+							<input type="text" class="form-control" name="name" placeholder="Enter application name" ng-model="pageCtrl.entity.name">
 						</div>
 						<div class="form-group">
-							<label>WAR File</label>
-							<input type="text" class="form-control" placeholder="https://github.com/organization/repository.git" ng-model="pageCtrl.entity.gitrepo">
+							<label class="btn btn-default">
+								WAR File <input type="file" class="form-control" name="warFilePath1" hidden style="display:none" accept=".war" nv-file-select uploader="pageCtrl.uploader">
+							</label>
+							<label ng-repeat="item in pageCtrl.uploader.queue" class="label label-primary" tooltip="size: {{item.file.size}} bytes{{item.file.type?', type: item.file.type':''}}" style="font-size:100%; padding: 2px 4px;">
+								<i class="fa fa-file-o" style="margin-right: 4px"></i> {{item.file.name}}
+							</label>
 						</div>
 						<div class="form-group">
-							<label>Docker Image</label>
-							<input type="text" class="form-control" placeholder="master" ng-model="pageCtrl.entity.gitbranch">
+							<label>Docker Image <small>(optional)</small></label>
+							<input type="text" class="form-control" name="dockerFilePath" placeholder="URL of docker image to use for web application runtime" ng-model="pageCtrl.entity.dockerFilePath">
 						</div>
 					</form>
 					<div ng-show="pageCtrl.actionType === 'delete'">
@@ -107,6 +109,7 @@
 	<script type="text/javascript" src="https://angular-ui.github.io/bootstrap/ui-bootstrap-tpls-0.14.3.js"></script>
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-layout.js"></script>
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-core-ng-modules.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-file-upload/2.3.4/angular-file-upload.js"></script>	
 
 	<script type="text/javascript" src="js/ng-rs-data.js"></script>
 	<script type="text/javascript" src="js/controller.js"></script>

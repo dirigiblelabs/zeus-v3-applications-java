@@ -6,7 +6,7 @@
                 "type": "TABLE",
                 "columns": [
                     {
-                        "name": "APPLICATION_ID",
+                        "name": "APP00J_ID",
                         "type": "INTEGER",
                         "length": 0,
                         "nullable": true,
@@ -18,7 +18,7 @@
                         "scale": null
                     },
                     {
-                        "name": "APPLICATION_NAME",
+                        "name": "APP00J_NAME",
                         "type": "VARCHAR",
                         "length": "128",
                         "nullable": true,
@@ -30,7 +30,31 @@
                         "scale": null
                     },
                     {
-                        "name": "APPLICATION_WAR",
+                        "name": "APP00J_USER",
+                        "type": "VARCHAR",
+                        "length": "256",
+                        "nullable": true,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APP00J_UPLOAD_TIME",
+                        "type": "BIGINT",
+                        "length": "0",
+                        "nullable": false,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APP00J_WAR_FPATH",
                         "type": "VARCHAR",
                         "length": "1024",
                         "nullable": false,
@@ -42,7 +66,7 @@
                         "scale": null
                     },
                     {
-                        "name": "APPLICATION_DOCKER_IMAGE",
+                        "name": "APP00J_DOCKER_IMAGE_FPATH",
                         "type": "VARCHAR",
                         "length": "1024",
                         "nullable": true,

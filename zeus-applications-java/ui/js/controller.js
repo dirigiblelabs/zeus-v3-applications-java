@@ -15,12 +15,32 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUplo
 .config(["EntityProvider", function(entityProvider) {
   entityProvider.config.apiEndpoint = '../../../../../../../../services/v3/js/zeus-applications-java/api/applications.js';
 }])
-.controller('PageController', ['Entity', '$messageHub', '$q', 'FileUploader', function (Entity, $messageHub, $q, FileUploader) {
+.service("WarFile", ['$http',function($http){
+	var baseurl = '../../../../../../../../services/v3/js/zeus-applications-java/api/wars.js';
+	return {
+		download: function(filepath){
+			return $http.get(baseurl + '/' + filepath, {
+				headers: {
+					"Accept": ["application/octet-stream"],
+				}
+			});
+		},
+		list: function(){
+			return $http.get(baseurl + '/', {
+				headers: {
+					"Accept": ["application/json"],
+				}
+			});
+		}
+	}
+}])
+.controller('PageController', ['Entity', '$messageHub', 'FileUploader', 'WarFile', function (Entity, $messageHub, FileUploader, WarFile) {
 
     this.dataPage = 1;
     this.dataCount = 0;
     this.dataOffset = 0;
     this.dataLimit = 10;
+    this.WarFile = WarFile;
 	var uploader = this.uploader = new FileUploader({
 		url: '../../../../../../../../services/v3/js/zeus-applications-java/api/wars.js',
 		autoUpload: true
@@ -52,8 +72,11 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUplo
                 this.dataPages = Math.ceil(this.dataCount / this.dataLimit);
                 this.data = data;
             }.bind(this))
-            .catch(function (error) {
-                //TODO
+            .catch(function (err) {
+               if (err.data){
+	            	console.error(err.data)
+	            }
+	            console.error(err);
             });
     };
 
@@ -66,12 +89,50 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUplo
     this.openEditDialog = function (entity) {
         this.actionType = 'update';
         this.entity = entity;
+        if(entity.warFilePath){
+        	this.entity.warFileName = WarFile.list(entity.warFilePath)
+							        	.then(function(response){
+							        		var list = response.data;
+							        		for (var i in list){
+							        			if (list[i].id === entity.warFilePath){
+							        				this.entity.warFileName = list[i].name;
+							        				return
+							        			}
+							        		}
+							        		return;
+							        	}.bind(this))
+							        	.catch(function(err){
+							        		if (err.data){
+								            	console.error(err.data.details);
+								            }
+								            console.error(err);
+								        });
+    	}
         toggleEntityModal();
     };
 
     this.openDeleteDialog = function (entity) {
         this.actionType = 'delete';
         this.entity = entity;
+        if(entity.warFilePath){
+        	this.entity.warFileName = WarFile.list(entity.warFilePath)
+							        	.then(function(response){
+							        		var list = response.data;
+							        		for (var i in list){
+							        			if (list[i].id === entity.warFilePath){
+							        				this.entity.warFileName = list[i].name;
+							        				return
+							        			}
+							        		}
+							        		return;
+							        	}.bind(this))
+							        	.catch(function(err){
+							        		if (err.data){
+								            	console.error(err.data.details);
+								            }
+								            console.error(err);
+								        });
+    	}
         toggleEntityModal();
     };
 
@@ -83,6 +144,7 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUplo
     uploader.onSuccessItem = function(item, response, status, headers) {
     	this.errors = "";
     	this.entity.warFilePath = headers.location;
+    	this.entity.warFileName = item.file.name;
     }.bind(this);
 
 	uploader.onErrorItem = function(item /*, response, status, headers*/){
@@ -99,7 +161,10 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUplo
             toggleEntityModal();
         }.bind(this))
         .catch(function (err) {
-        	this.errors = 'Saving failed';
+        	if (err.data){
+            	console.error(err.data.details);
+            }
+            console.error(err);
         });
     };
 
@@ -111,22 +176,28 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUplo
 	            $messageHub.messageEntityModified();
 	    	}.bind(this))
 	    	.catch(function(err) {
-	            //TODO
+	            if (err.data){
+	            	console.error(err.data.details);
+	            }
+	            console.error(err);
 	        });
     };
 
     this.delete = function () {
-		return Entity.remove({id: this.entity.id})
+		return Entity.remove({id: this.entity.id}).$promise
     	.then(function(){
 				this.loadPage(this.dataPage);
                 toggleEntityModal();
                 $messageHub.messageEntityModified();
 			}.bind(this))
 		.catch(function(err){
-				//TODO
+				if (err.data){
+	            	console.error(err.data.details);
+	            }
+	            console.error(err);
 			});
     };
-
+    
     $messageHub.onEntityRefresh(this.loadPage);
 
     function toggleEntityModal() {

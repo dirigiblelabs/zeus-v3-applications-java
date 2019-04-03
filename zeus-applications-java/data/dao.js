@@ -19,14 +19,24 @@ exports.create = function(){
 				type: "VARCHAR",
 				size: 256
 			},{
-				name: "uploadTime",
-				column: "APP00J_UPLOAD_TIME",
+				name: "createTime",
+				column: "APP00J_CREATE_TIME",
 				type: "BIGINT",
-				dbValue: function(uploadTime){
-					return uploadTime !== undefined ? new Date(uploadTime).getTime() : null;
+				dbValue: function(createTime){
+					return createTime !== undefined ? new Date(createTime).getTime() : null;
 				},
 				value: function(dbValue){
 					return dbValue !== null ? new Date(dbValue).toISOString() : undefined;
+				}
+			},{
+				name: "lastModifiedTime",
+				column: "APP00J_LASTMODIFIED_TIME",
+				type: "BIGINT",
+				dbValue: function(lastModifiedTime){
+					return lastModifiedTime !== undefined ? new Date(lastModifiedTime).getTime() : null;
+				},
+				value: function(dbValue){
+					return dbValue === null || dbValue === undefined? undefined : new Date(dbValue).toISOString();
 				}
 			},{
 				name: "warFilePath",

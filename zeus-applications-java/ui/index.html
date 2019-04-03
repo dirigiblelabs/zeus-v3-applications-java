@@ -23,13 +23,17 @@
 				<tr>
 					<th class="text-capitalize">Name</th>
 					<th class="text-capitalize">Date Created</th>
+					<th class="text-capitalize">Last Modified Date</th>
+					<th class="text-capitalize">Created By</th>
 					<th></th>
 				</tr>
 			</thead>
 			<tbody>
 				<tr ng-repeat="next in pageCtrl.data">
 					<td>{{next.name}}</td>
-					<td>{{next.uploadTime}}</td>
+					<td>{{next.createTime}}</td>
+					<td>{{next.lastModifiedTime}}</td>
+					<td>{{next.user}}</td>
 					<td>
 						<i class="close fa fa-remove" ng-click="pageCtrl.openDeleteDialog(next)" style="font-size: 1.4em"></i>
 						<i class="close fa fa-bars" ng-click="pageCtrl.openEditDialog(next)" style="margin-right: 0.5em; font-size: 1.4em"></i>
@@ -46,6 +50,7 @@
 					<h3 ng-show="pageCtrl.actionType === 'new'" class="modal-title" id="createEntityLbl">Create Java Web Application</h3>
 					<h3 ng-show="pageCtrl.actionType === 'update'" class="modal-title" id="updateEntityLbl">Update Java Web Application</h3>
 					<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete Java Web Application</h3>
+					<small ng-show="pageCtrl.entity.id">Created by <span  ng-bind="pageCtrl.entity.user"></span> at <span ng-bind="pageCtrl.entity.createTime"></span></small>
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 						<span aria-hidden="true">&times;</span>
 					</button>
@@ -60,14 +65,14 @@
 							<label class="btn btn-default">
 								WAR File <input type="file" class="form-control" name="warFilePath1" hidden style="display:none" accept=".war" nv-file-select uploader="pageCtrl.uploader">
 							</label>
-							<label ng-repeat="item in pageCtrl.uploader.queue" class="label label-primary" tooltip="size: {{item.file.size}} bytes{{item.file.type?', type: item.file.type':''}}" style="font-size:100%; padding: 2px 4px;">
-								<i class="fa fa-file-o" style="margin-right: 4px"></i> {{item.file.name}}
+							<label ng-show="pageCtrl.entity.warFileName" class="label label-primary" style="font-size:100%; padding: 2px 4px;">
+								<a href="#" ng-click="pageCtrl.WarFile.download(pageCtrl.entity.warFilePath)"><i class="fa fa-file-o" style="margin-right: 4px"></i> <span ng-bind="pageCtrl.entity.warFileName"></span></a>
 							</label>
 						</div>
-						<div class="form-group">
+						<!--div class="form-group">
 							<label>Docker Image <small>(optional)</small></label>
 							<input type="text" class="form-control" name="dockerFilePath" placeholder="URL of docker image to use for web application runtime" ng-model="pageCtrl.entity.dockerFilePath">
-						</div>
+						</div-->
 					</form>
 					<div ng-show="pageCtrl.actionType === 'delete'">
 						You are going to <b>delete</b> Java Application <b>{{pageCtrl.entity.name}}</b>.

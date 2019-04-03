@@ -42,7 +42,7 @@
                         "scale": null
                     },
                     {
-                        "name": "APP00J_UPLOAD_TIME",
+                        "name": "APP00J_CREATE_TIME",
                         "type": "BIGINT",
                         "length": "0",
                         "nullable": false,
@@ -54,10 +54,22 @@
                         "scale": null
                     },
                     {
+                        "name": "APP00J_LASTMODIFIED_TIME",
+                        "type": "BIGINT",
+                        "length": "0",
+                        "nullable": true,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
                         "name": "APP00J_WAR_FPATH",
                         "type": "VARCHAR",
                         "length": "1024",
-                        "nullable": false,
+                        "nullable": true,
                         "primaryKey": false,
                         "identity": false,
                         "unique": false,

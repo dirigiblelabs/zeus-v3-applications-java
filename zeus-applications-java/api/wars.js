@@ -1,13 +1,15 @@
 var upload = require('http/v3/upload');
 var cmis = require('cms/v3/cmis');
 var streams = require('io/streams');
-var producer = require('messaging/v3/producer');
-	
+
+var logging = require('log/v3/logging');
+
+var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');
+
 require('http/v3/rs')
 .service()
   .resource("")
 	.post(function(context, request, response){
-			console.info("upload request received");
 			if (upload.isMultipartContent()) {
 				var fileItems = upload.parseRequest();
 				for (var i=0; i<fileItems.size(); i++) {
@@ -16,38 +18,42 @@ require('http/v3/rs')
 						var filename = fileItem.getName();
 						var content = fileItem.getBytes();
 						if (content.length<1){
+							logger.warn("storing {} cancelled because file size is 0", filename);
 							throw "storing " + filename + " cancelled because file size is 0";
 						}
-						console.info("storing " + filename + " to CMIS storage");
-						var documentId = save(filename, content);
-						console.info("sending message for war upload");
-						producer.queue("zeus.applications.java.war.uploaded").send("documentId");
+						logger.debug("storing {} to CMIS storage", filename);
+						var documentId = create(filename, content);
 						response.setHeader("Location", documentId);
 					} else {
-						console.info("Field Name: " + fileItem.getFieldName());
-						console.info("Field Text: " + fileItem.getText());
+						logger.info(fileItem.getFieldName() + ": "+ fileItem.getText());
 					}
 				}
 			    response.setStatus(response.CREATED);
 				return;
 			}
-			response.write("not a multipart content request");
 			response.setStatus(response.BAD_REQUEST);
 		})
 		.consumes('multipart/form-data')
-  .resource("{cmisdocumentid}")
+  .resource("")
 	.get(function(context, request, response){
-			console.info("get file request received");
-			//TODO: get from cmis
+			var resourceList = list();
+			var jsonPayload = JSON.stringify(resourceList, null, 2);
+			response.println(jsonPayload);
+		    response.setStatus(response.OK);
+		})
+		.produces('application/json')
+  .resource("/{cmisdocumentid}")
+	.get(function(context, request, response){
+			var content = get(context.pathParameters.cmisdocumentid);
+			response.write(content);
 		    response.setStatus(response.OK);
 		})
 		.produces('application/octet-stream')
-
 .execute();
 
 // returns the new document id or throws error
-function save(filename, content){
-	var cmisSession = cmis.getSession();	
+function create(filename, content){
+	var cmisSession = cmis.getSession();
 	var rootFolder = cmisSession.getRootFolder();
 		
 	var mimetype = "application/zip";
@@ -66,4 +72,28 @@ function save(filename, content){
 	var newDocument = rootFolder.createDocument(properties, contentStream, cmis.VERSIONING_STATE_MAJOR);
 	
 	return newDocument.getId(); 
+}
+
+function get(documentId){
+	var cmisSession = cmis.getSession();		
+	var doc = cmisSession.getObject(documentId);
+	var contentStream = doc.getContentStream(); // returns null if the document has no content
+	if (contentStream !== null) {
+	    return contentStream.getStream().readBytes();
+	}
+	return;
+}
+
+function list(){
+	var cmisSession = cmis.getSession();
+	var rootFolder = cmisSession.getRootFolder();
+	var children = rootFolder.getChildren();
+	var resources = [];
+	for (var i in children) {
+		resources.push({
+			"id": children[i].getId(),
+			"name": children[i].getName()
+		});
+	}
+	return resources;
 }

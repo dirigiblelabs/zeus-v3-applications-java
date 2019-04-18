@@ -1,0 +1,1 @@
+{"name":"/zeus-applications-java/created","type":"T","handler":"zeus-applications-java/messages/deploy.js","description":"Topic listener for java application create/update events.\nThe message payload is JSON with the following schema:\n{\n  warFilePath: string,\n  id: string\n}"}

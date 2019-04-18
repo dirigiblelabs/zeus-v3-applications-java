@@ -68,6 +68,18 @@
                     {
                         "name": "APP00J_WAR_FPATH",
                         "type": "VARCHAR",
+                        "length": "2048",
+                        "nullable": true,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APP00J_WAR_FNAME",
+                        "type": "VARCHAR",
                         "length": "1024",
                         "nullable": true,
                         "primaryKey": false,

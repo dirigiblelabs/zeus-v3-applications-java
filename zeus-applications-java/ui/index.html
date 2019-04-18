@@ -36,7 +36,7 @@
 					<td>{{next.user}}</td>
 					<td>
 						<i class="close fa fa-remove" ng-click="pageCtrl.openDeleteDialog(next)" style="font-size: 1.4em"></i>
-						<i class="close fa fa-bars" ng-click="pageCtrl.openEditDialog(next)" style="margin-right: 0.5em; font-size: 1.4em"></i>
+						<i class="close fa fa-bars" ng-click="pageCtrl.openNewDialog(next)" style="margin-right: 0.5em; font-size: 1.4em"></i>
 					</td>
 				</tr>
 			</tbody>
@@ -63,10 +63,10 @@
 						</div>
 						<div class="form-group">
 							<label class="btn btn-default">
-								WAR File <input type="file" class="form-control" name="warFilePath1" hidden style="display:none" accept=".war" nv-file-select uploader="pageCtrl.uploader">
+								WAR File <input type="file" class="form-control" name="warFilePath1" hidden style="display:none" accept=".war" nv-file-select uploader="pageCtrl.objectStore.fileUpload" multiple>
 							</label>
-							<label ng-show="pageCtrl.entity.warFileName" class="label label-primary" style="font-size:100%; padding: 2px 4px;">
-								<a href="#" ng-click="pageCtrl.WarFile.download(pageCtrl.entity.warFilePath)"><i class="fa fa-file-o" style="margin-right: 4px"></i> <span ng-bind="pageCtrl.entity.warFileName"></span></a>
+							<label href="#" ng-show="pageCtrl.entity.warFilePath" class="label label-primary" style="font-size:100%; padding: 2px 4px;">
+								<span ng-click="pageCtrl.objectStore.download(pageCtrl.entity.warFilePath)"><i class="fa fa-file-o" style="margin-right: 4px"></i> <span ng-bind="pageCtrl.entity.warFileName"></span></span>
 							</label>
 						</div>
 						<!--div class="form-group">
@@ -79,16 +79,16 @@
 					</div>
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'new'" ng-click="pageCtrl.create()">Save</button>
-					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'update'" ng-click="pageCtrl.update()">Update</button>
+					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'new'" ng-click="pageCtrl.create()" ng-disabled="!pageCtrl.entity.name">Save</button>
+					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'update'" ng-click="pageCtrl.update()" ng-disabled="!pageCtrl.entity.name">Update</button>
 					<button type="button" class="btn btn-primary" ng-show="pageCtrl.actionType === 'delete'" ng-click="pageCtrl.delete()">Delete</button>
-					<button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-danger" data-dismiss="modal" ng-click="pageCtrl.close()">Close</button>
 				</div>
 			</div>
 		</div>
 	</div>
 	<nav class="text-center">
-	    <ul class="pagination">
+	    <ul class="pagination" ng-show="pageCtrl.dataPages">
 	        <li class="page-item" ng-click="previousPage()" ng-class="{disabled: dataPage == 1 ||  dataPage == dataPages}">
 	            <a class="page-link" href="#" aria-label="Previous">
 	                <span aria-hidden="true">&laquo;</span>

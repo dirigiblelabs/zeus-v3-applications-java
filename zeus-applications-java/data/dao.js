@@ -42,6 +42,11 @@ exports.create = function(){
 				name: "warFilePath",
 				column: "APP00J_WAR_FPATH",
 				type: "VARCHAR",
+				size: 2048
+			},{
+				name: "warFileName",
+				column: "APP00J_WAR_FNAME",
+				type: "VARCHAR",
 				size: 1024
 			},{
 				name: "dockerFilePath",

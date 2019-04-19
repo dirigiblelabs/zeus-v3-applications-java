@@ -31,8 +31,8 @@
 			<tbody>
 				<tr ng-repeat="next in pageCtrl.data">
 					<td>{{next.name}}</td>
-					<td>{{next.createTime}}</td>
-					<td>{{next.lastModifiedTime}}</td>
+					<td>{{pageCtrl.parseDate(next.createTime) | date: 'medium'}}</td>
+					<td>{{pageCtrl.parseDate(next.lastModifiedTime) || pageCtrl.parseDate(next.createTime) | date: 'medium'}}</td>
 					<td>{{next.user}}</td>
 					<td>
 						<i class="close fa fa-remove" ng-click="pageCtrl.openDeleteDialog(next)" style="font-size: 1.4em"></i>

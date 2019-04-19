@@ -165,7 +165,11 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','angularFileUplo
     
     this.removeWar = function(){
     	// TODO: implement me
-    }
+    };
+    
+    this.parseDate = function(dateString){
+    	return Date.parse(dateString);
+    };
     
     $messageHub.onEntityRefresh(this.loadPage);
 

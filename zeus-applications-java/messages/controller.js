@@ -1,8 +1,7 @@
-//var kserving = require('kubernetes/apis/serving.knative.dev/v1alpha1');
-//var kbuild = require('kubernetes/apis/build.knative.dev/v1alpha1');
-//var cluster = require('zeus/utils/cluster');
 var logging = require('log/v4/logging');
 var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');	
+var Credentials = require("zeus-deployer/utils/Credentials");
+var ServicesApi = require("kubernetes/apis/serving.knative.dev/v1alpha1/Services");
 
 exports.onMessage = function(message) {
 	logger.trace("message received: " + message);
@@ -28,8 +27,7 @@ exports.onMessage = function(message) {
 			logger.error('Invalid message: "name" is missing');
 			throw new Error('Invalid message: "name" is missing');
 		}
-		// TODO: handle delete
-		// 		 delete existing KnativeSevice resource with the given name	
+		deleteService(messageObject.name);
 	}
 	
 	if (messageObject.operation.toLowerCase() === 'create' || messageObject.operation.toLowerCase() === 'update'){
@@ -43,8 +41,7 @@ exports.onMessage = function(message) {
 			// TODO: implement get from data base or deny such requests
 			return;
 		}		
-		// TODO: handle create/update
-		// 		 create and apply a KnativeSevice manifest or update existing resource with application name and the war file path in the build phase
+		createService(messageObject.name, messageObject.warFilePath);
 	}
 };
 
@@ -52,26 +49,99 @@ exports.onError = function(error) {
 	logger.error("message receipt failure: {}", error);
 };
 
-//var buildKService = function(name, namespace){
-//	var clusterSettings = cluster.getSettings();
-//	var server = clusterSettings.server;
-//	var namespace = clusterSettings.namespace;
-//	var token = clusterSettings.token;
-//	
-//	var ksvcApi = new kserving.Services(server, token, namespace);
-//
-//	var ksvc = ksvcApi.getEntityBuilder();
-//	ksvc.getMetadata().setName(name);
-//	ksvc.getMetadata().setNamespace(namespace);
-//
-//	var kbuildApi = new kbuild.Build(server, token, namespace);	
-//	var kbuild = ksvcApi.getEntityBuilder();
-//	//TODO
-//	ksvc.getSpec().getRunLatest().getConfiguration().setBuild(kbuild.build());
-//	
-//	return ksvc.build();
-//};
-//
-//var deploy = function(){
-//
-//};
+function deleteService(serviceName) {
+	var credentials = Credentials.getDefaultCredentials();
+	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	api.delete(serviceName);
+}
+
+function createService(serviceName, warUrl) {
+	var sourceUrl = "https://github.com/dirigiblelabs/zeus-v3-sample-war.git";
+	var sourceVersion = "3dcfec744dcfe88adda56a1d9db73275cb82021a";
+	var image = "docker.io/dirigiblelabs/" + serviceName + ":latest";
+	
+	var databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
+	var databaseUsername = "promart";
+	var databasePassword = "Abcd1234";
+
+	var entity = {
+		"apiVersion": "serving.knative.dev/v1alpha1",
+		"kind": "Service",
+		"metadata": {
+	        "name": serviceName,
+	        "namespace": "zeus",
+	    },
+	    "spec": {
+	        "runLatest": {
+	            "configuration": {
+	                "build": {
+	                    "apiVersion": "build.knative.dev/v1alpha1",
+	                    "kind": "Build",
+	                    "spec": {
+	                        "serviceAccountName": "kneo",
+	                        "source": {
+	                            "git": {
+	                                "revision": sourceVersion,
+	                                "url": sourceUrl
+	                            }
+	                        },
+	                        "template": {
+	                            "arguments": [
+	                                {
+	                                    "name": "IMAGE",
+	                                    "value": image,
+	                                },
+	                                {
+	                                    "name": "ARG",
+	                                    "value": "WAR_URL=https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api/read/document/download?path=" + warUrl
+	                                }
+	                            ],
+	                            "name": "kaniko-war-template"
+	                        }
+	                    },
+	                    "timeout": "10m"
+	                },
+	                "revisionTemplate": {
+	                    "metadata": {
+	                        "annotations": {
+	                            "autoscaling.knative.dev/maxScale": "10",
+	                            "autoscaling.knative.dev/minScale": "1"
+	                        },
+	                        "creationTimestamp": null
+	                    },
+	                    "spec": {
+	                        "container": {
+	                            "env": [
+	                                {
+	                                    "name": "DefaultDB_driverClassName",
+	                                    "value": "org.postgresql.Driver"
+	                                },
+	                                {
+	                                    "name": "DefaultDB_url",
+	                                    "value": databaseUrl
+	                                },
+	                                {
+	                                    "name": "DefaultDB_username",
+	                                    "value": databaseUsername
+	                                },
+	                                {
+	                                    "name": "DefaultDB_password",
+	                                    "value": databasePassword
+	                                }
+	                            ],
+	                            "image": image,
+	                            "imagePullPolicy": "Always",
+	                            "name": "",
+	                            "resources": {}
+	                        },
+	                        "timeoutSeconds": 300
+	                    }
+	                }
+	            }
+	        }
+	    }
+	};
+	var credentials = Credentials.getDefaultCredentials();
+	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	return api.create(entity);
+}

@@ -16,6 +16,7 @@ svc.mappings().create()
 		if (ids !== undefined && entity !== undefined){
 			var message = {
 			  warFilePath: entity.warFilePath,
+			  name: entity.name,
 			  id: ids,
 			  operation: 'create'
 			};
@@ -52,7 +53,7 @@ svc.mappings().remove()
 			var message = {
 				name: context.entity.name,
 				id: id,
-				operation: 'remove'
+				operation: 'delete'
 			};
 			logger.debug('sending message: {}', JSON.stringify(message));
 			messagesTopic.send(JSON.stringify(message));

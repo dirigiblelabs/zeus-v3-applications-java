@@ -1,6 +1,6 @@
 angular.module('ngCmis',['angularFileUpload'])
 .provider('Cmis', function CmisProvider() {
-    var baseUrl = this.baseUrl = 'http://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api';
+    var baseUrl = this.baseUrl = 'https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api';
 	var config = this.config = {
 		upload: {
 			url: baseUrl + '/manage/create/document?path=/',

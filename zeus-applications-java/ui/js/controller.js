@@ -16,7 +16,7 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
   entityProvider.config.apiEndpoint = '../../../../../../../../services/v3/js/zeus-applications-java/api/applications.js';
 }])
 .config(["CmisProvider", function(cmisProvider) {
-  cmisProvider.baseUrl = 'http://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api';
+  cmisProvider.baseUrl = 'https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api';
 }])
 .controller('PageController', ['Entity', '$messageHub', 'Cmis', function (Entity, $messageHub, Cmis) {
 

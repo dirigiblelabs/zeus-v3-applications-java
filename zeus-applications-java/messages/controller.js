@@ -1,7 +1,10 @@
 var logging = require('log/v4/logging');
 var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');	
 var Credentials = require("zeus-deployer/utils/Credentials");
-var ServicesApi = require("kubernetes/apis/serving.knative.dev/v1alpha1/Services");
+var KnServicesApi = require("kubernetes/apis/serving.knative.dev/v1alpha1/Services");
+var ServicesApi = require("kubernetes/api/v1/Services");
+var VirtualServicesApi = require("kubernetes/apis/networking.istio.io/v1alpha3/VirtualServices");
+
 
 exports.onMessage = function(message) {
 	logger.trace("message received: " + message);
@@ -28,10 +31,10 @@ exports.onMessage = function(message) {
 			throw new Error('Invalid message: "name" is missing');
 		}
 		deleteService(messageObject.name);
+		deleteVirtualService("route-"+messageObject.name);
 	}
 	
 	if (messageObject.operation.toLowerCase() === 'create' || messageObject.operation.toLowerCase() === 'update'){
-		// TODO: validate create/update
 		if (messageObject.warFilePath == undefined){
 			if (messageObject.id == undefined){
 				logger.error("No explicit war file path or application id specified in the message object. Can not handle.");
@@ -42,6 +45,20 @@ exports.onMessage = function(message) {
 			return;
 		}		
 		createService(messageObject.name, messageObject.warFilePath);
+		var serviceName, retries;
+		retry(function(retriesCount){
+			retries = retriesCount;
+			serviceName = getServiceName(messageObject.name);
+			if(serviceName){
+				return true;
+			}
+			logger.warn("Service for knative service not ready yet. Wating some more time.");
+			return false;
+		}, 5, 30*1000, true);
+		if (!serviceName){
+			logger.error("Service for knative service {} not ready after {} retires. Giving up to create virtual service for it.", messageObject.name, retries);
+		}
+		createVirtualService(messageObject.name, serviceName, 'zeus');
 	}
 };
 
@@ -51,7 +68,7 @@ exports.onError = function(error) {
 
 function deleteService(serviceName) {
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new KnServicesApi(credentials.server, credentials.token, credentials.namespace);
 	api.delete(serviceName);
 }
 
@@ -142,18 +159,21 @@ function createService(serviceName, warUrl) {
 	    }
 	};
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new KnServicesApi(credentials.server, credentials.token, credentials.namespace);
 	return api.create(entity);
 }
 
 function getServiceName(kserviceName) {
 	var credentials = Credentials.getDefaultCredentials();
 	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
-	var entity = api.get("/api/v1/services?labelSelector=serving.knative.dev/service%3D"+kserviceName);//TODO: ?
-	return entity.metadata.name;
+	var items = api.list({labelSelector: "serving.knative.dev/service%3D"+kserviceName});
+	if (items == undefined || items.length === 0){
+		return;
+	}
+	return items[0].metadata.name;
 }
 
-function createVirtualService(appName, kserviceName, namespace) {
+function createVirtualService(appName, serviceName, namespace) {
 	var entity = {
 	    "apiVersion": "networking.istio.io/v1alpha3",
 	    "kind": "VirtualService",
@@ -181,7 +201,7 @@ function createVirtualService(appName, kserviceName, namespace) {
 	                "route": [
 	                    {
 	                        "destination": {
-	                            "host": kserviceName+"."+namespace+".svc.cluster.local",
+	                            "host": serviceName+"."+namespace+".svc.cluster.local",
 	                            "port": {
 	                                "number": 80
 	                            }
@@ -194,6 +214,33 @@ function createVirtualService(appName, kserviceName, namespace) {
 	    }
 	};
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new VirtualServicesApi(credentials.server, credentials.token, credentials.namespace);
 	return api.create(entity);
+}
+
+function deleteVirtualService(serviceName){
+	var credentials = Credentials.getDefaultCredentials();
+	var api = new VirtualServicesApi(credentials.server, credentials.token, credentials.namespace);
+	return api.delete(serviceName);
+}
+
+var threads = require('core/v4/threads');
+function retry(retriedFunction, maxRetries, interval, progressive){
+	var maxretries = maxRetries || 5;
+	var retries=0;
+	var sleepTime = interval || 15*1000;
+	do {
+		retries++;
+		if (retriedFunction(retries)) {
+			return;
+		}
+		if(progressive){
+			if (typeof progressive === 'function'){
+				sleepTime = progressive(sleepTime);
+			} else {
+				sleepTime = sleepTime*2;	
+			}
+		}
+		threads.sleep(sleepTime);	
+	} while(retries < maxretries)
 }

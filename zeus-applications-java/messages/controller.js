@@ -145,3 +145,55 @@ function createService(serviceName, warUrl) {
 	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
 	return api.create(entity);
 }
+
+function getServiceName(kserviceName) {
+	var credentials = Credentials.getDefaultCredentials();
+	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var entity = api.get("/api/v1/services?labelSelector=serving.knative.dev/service%3D"+kserviceName);//TODO: ?
+	return entity.metadata.name;
+}
+
+function createVirtualService(appName, kserviceName, namespace) {
+	var entity = {
+	    "apiVersion": "networking.istio.io/v1alpha3",
+	    "kind": "VirtualService",
+	    "metadata": {
+	        "name": "route-"+appName,
+	        "namespace": "zeus",
+	    },
+	    "spec": {
+	        "gateways": [
+	            "knative-ingress-gateway",
+	            "mesh"
+	        ],
+	        "hosts": [
+	            appName+".apps.onvms.com"
+	        ],
+	        "http": [
+	            {
+	                "match": [
+	                    {
+	                        "authority": {
+	                            "exact": appName+".apps.onvms.com"
+	                        }
+	                    }
+	                ],
+	                "route": [
+	                    {
+	                        "destination": {
+	                            "host": kserviceName+"."+namespace+".svc.cluster.local",
+	                            "port": {
+	                                "number": 80
+	                            }
+	                        },
+	                        "weight": 100
+	                    }
+	                ]
+	            }
+	        ]
+	    }
+	};
+	var credentials = Credentials.getDefaultCredentials();
+	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	return api.create(entity);
+}

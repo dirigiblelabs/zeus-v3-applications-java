@@ -47,10 +47,13 @@
 		<div class="modal-dialog" role="document">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h3 ng-show="pageCtrl.actionType === 'new'" class="modal-title" id="createEntityLbl">Create Java Web Application</h3>
-					<h3 ng-show="pageCtrl.actionType === 'update'" class="modal-title" id="updateEntityLbl">Update Java Web Application</h3>
-					<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete Java Web Application</h3>
-					<small ng-show="pageCtrl.entity.id">Created by <span  ng-bind="pageCtrl.entity.user"></span> at <span ng-bind="pageCtrl.entity.createTime"></span></small>
+					<div class="col-sm-8">
+						<h3 ng-show="pageCtrl.actionType === 'new'" class="modal-title" id="createEntityLbl">Create Java Web Application</h3>
+						<h3 ng-show="pageCtrl.actionType === 'update'" class="modal-title" id="updateEntityLbl">Update Java Web Application</h3>
+						<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete Java Web Application</h3>
+						<small ng-show="pageCtrl.entity.id" style="display:block; margin-top: 10px;">Created: {{pageCtrl.parseDate(pageCtrl.entity.createTime) | date: 'medium'}} by <span  ng-bind="pageCtrl.entity.user"></span></small>
+						<small ng-show="pageCtrl.entity.id">Last Modified: {{pageCtrl.parseDate(pageCtrl.entity.lastModifiedTime) || pageCtrl.parseDate(pageCtrl.entity.createTime) | date: 'medium'}} by <span  ng-bind="pageCtrl.entity.user"></span></small>
+					</div>
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 						<span aria-hidden="true">&times;</span>
 					</button>
@@ -73,6 +76,11 @@
 							<label>Docker Image <small>(optional)</small></label>
 							<input type="text" class="form-control" name="dockerFilePath" placeholder="URL of docker image to use for web application runtime" ng-model="pageCtrl.entity.dockerFilePath">
 						</div-->
+						<div class="form-group" ng-if="pageCtrl.entity.name && pageCtrl.entity.warFileName">
+							<label>Access URLs:</label>
+							<span ng-if="!pageCtrl.entity.id" ng-repeat="url in pageCtrl.getAccessUrls()" ng-bind="url" style="display:block"></span>
+							<a ng-if="pageCtrl.entity.id" ng-repeat="url in pageCtrl.getAccessUrls()" ng-href="{{url}}" target="_blank" rel="noopener noreferrer" style="display:block">{{url}}</a>
+						</div>
 					</form>
 					<div ng-show="pageCtrl.actionType === 'delete'">
 						You are going to <b>delete</b> Java Application <b>{{pageCtrl.entity.name}}</b>.

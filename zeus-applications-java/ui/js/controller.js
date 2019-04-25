@@ -134,6 +134,24 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
     this.parseDate = function(dateString){
     	return Date.parse(dateString);
     };
+
+    this.getAccessUrls = function(){
+        if (this.entity == undefined){
+            return;
+        }
+        var path = this.entity.warFileName;
+        if (path.endsWith(".war")){
+            path = path.substring(0, path.length-4);
+        }
+        if (this.entity.warFileName == 'ROOT'){
+            path ="";
+        }
+        path = "/" + path;
+        return [
+            "http://"+ this.entity.name + ".apps.onvms.com"+ path,
+            "http://"+ this.entity.name + ".zeus.apps.onvms.com"+ path,
+        ];
+    };
     
     $messageHub.onEntityRefresh(this.loadPage);
 

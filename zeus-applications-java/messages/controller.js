@@ -7,7 +7,7 @@ var VirtualServicesApi = require("kubernetes/apis/networking.istio.io/v1alpha3/V
 var threads = require("core/v4/threads");
 
 exports.onMessage = function(message) {
-	logger.trace("message received: " + message);
+	logger.debug("message received: " + message);
 	var messageObject;
 	try{
 		messageObject = JSON.parse(message);	
@@ -30,7 +30,7 @@ exports.onMessage = function(message) {
 			logger.error('Invalid message: "name" is missing');
 			throw new Error('Invalid message: "name" is missing');
 		}
-		deleteService(messageObject.name);
+		deleteKnativeService(messageObject.name);
 		deleteVirtualService("route-"+messageObject.name);
 	}
 	
@@ -44,7 +44,7 @@ exports.onMessage = function(message) {
 			// TODO: implement get from data base or deny such requests
 			return;
 		}		
-		createService(messageObject.name, messageObject.warFilePath);
+		createKnativeService(messageObject.name, messageObject.warFilePath);
 		var serviceName, retries;
 		retry(function(retriesCount){
 			retries = retriesCount;
@@ -53,7 +53,7 @@ exports.onMessage = function(message) {
 				logger.debug("Service for knative service route: {}", serviceName);
 				return true;
 			}
-			logger.warn("Service for knative service route not ready yet. Wating some more time.");
+			logger.debug("Service for knative service route not ready yet. Wating some more time.");
 			return false;
 		}, 5, 30*1000, false);
 		if (!serviceName){
@@ -67,15 +67,15 @@ exports.onError = function(error) {
 	logger.error("message receipt failure: {}", error);
 };
 
-function deleteService(serviceName) {
+function deleteKnativeService(serviceName) {
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new KnServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
 	api.delete(serviceName);
 }
 
-function createService(serviceName, warUrl) {
+function createKnativeService(serviceName, warUrl) {
 	var sourceUrl = "https://github.com/dirigiblelabs/zeus-v3-sample-war.git";
-	var sourceVersion = "3dcfec744dcfe88adda56a1d9db73275cb82021a";
+	var sourceVersion = "a50a66db2cc9296d9c55499427b28764a05f8be3";
 	var image = "docker.io/dirigiblelabs/" + serviceName + ":latest";
 	
 	var databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
@@ -160,13 +160,14 @@ function createService(serviceName, warUrl) {
 	    }
 	};
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new KnServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
+	logger.info("Creating serving.knative.dev/v1alpha1 Service {}", serviceName);
 	return api.create(entity);
 }
 
 function getServiceName(kserviceName) {
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new ServicesApi(credentials.server, credentials.token, 'zeus');
 	logger.debug("Getting service for route with label serving.knative.dev/service: {}", kserviceName);
 	var items = api.list({labelSelector: "serving.knative.dev/service%3D" + kserviceName});
 	if (items == undefined || items.length === 0){
@@ -176,12 +177,13 @@ function getServiceName(kserviceName) {
 }
 
 function createVirtualService(appName, serviceName, namespace) {
+	var vservicename = "route-"+appName
 	var entity = {
 	    "apiVersion": "networking.istio.io/v1alpha3",
 	    "kind": "VirtualService",
 	    "metadata": {
-	        "name": "route-"+appName,
-	        "namespace": "zeus",
+	        "name": vservicename,
+	        "namespace": "knative-serving",
 	    },
 	    "spec": {
 	        "gateways": [
@@ -200,6 +202,10 @@ function createVirtualService(appName, serviceName, namespace) {
 	                        }
 	                    }
 	                ],
+					"retries": {
+						"attempts": 3,
+						"perTryTimeout": "10m0s"
+					},
 	                "route": [
 	                    {
 	                        "destination": {
@@ -210,19 +216,23 @@ function createVirtualService(appName, serviceName, namespace) {
 	                        },
 	                        "weight": 100
 	                    }
-	                ]
+	                ],
+					"timeout": "10m0s",
+					"websocketUpgrade": true
 	            }
 	        ]
 	    }
 	};
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new VirtualServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new VirtualServicesApi(credentials.server, credentials.token, 'knative-serving');
+	logger.info("Creating networking.istio.io/v1alpha3 VirtualService {}", vservicename);
 	return api.create(entity);
 }
 
 function deleteVirtualService(serviceName){
 	var credentials = Credentials.getDefaultCredentials();
-	var api = new VirtualServicesApi(credentials.server, credentials.token, credentials.namespace);
+	var api = new VirtualServicesApi(credentials.server, credentials.token, 'knative-serving');
+	logger.info("Deliting networking.istio.io/v1alpha3 VirtualService {}", serviceName);
 	return api.delete(serviceName);
 }
 

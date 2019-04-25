@@ -4,7 +4,7 @@ var Credentials = require("zeus-deployer/utils/Credentials");
 var KnServicesApi = require("kubernetes/apis/serving.knative.dev/v1alpha1/Services");
 var ServicesApi = require("kubernetes/api/v1/Services");
 var VirtualServicesApi = require("kubernetes/apis/networking.istio.io/v1alpha3/VirtualServices");
-
+var threads = require("core/v4/threads");
 
 exports.onMessage = function(message) {
 	logger.trace("message received: " + message);
@@ -50,13 +50,14 @@ exports.onMessage = function(message) {
 			retries = retriesCount;
 			serviceName = getServiceName(messageObject.name);
 			if(serviceName){
+				logger.debug("Service for knative service route: {}", serviceName);
 				return true;
 			}
-			logger.warn("Service for knative service not ready yet. Wating some more time.");
+			logger.warn("Service for knative service route not ready yet. Wating some more time.");
 			return false;
-		}, 5, 30*1000, true);
+		}, 5, 30*1000, false);
 		if (!serviceName){
-			logger.error("Service for knative service {} not ready after {} retires. Giving up to create virtual service for it.", messageObject.name, retries);
+			logger.error("Route service for knative service {} not ready after {} retries. Giving up to create VirtualService for it.", messageObject.name, retries);
 		}
 		createVirtualService(messageObject.name, serviceName, 'zeus');
 	}
@@ -166,7 +167,8 @@ function createService(serviceName, warUrl) {
 function getServiceName(kserviceName) {
 	var credentials = Credentials.getDefaultCredentials();
 	var api = new ServicesApi(credentials.server, credentials.token, credentials.namespace);
-	var items = api.list({labelSelector: "serving.knative.dev/service%3D"+kserviceName});
+	logger.debug("Getting service for route with label serving.knative.dev/service: {}", kserviceName);
+	var items = api.list({labelSelector: "serving.knative.dev/service%3D" + kserviceName});
 	if (items == undefined || items.length === 0){
 		return;
 	}
@@ -224,7 +226,6 @@ function deleteVirtualService(serviceName){
 	return api.delete(serviceName);
 }
 
-var threads = require('core/v4/threads');
 function retry(retriedFunction, maxRetries, interval, progressive){
 	var maxretries = maxRetries || 5;
 	var retries=0;
@@ -241,6 +242,6 @@ function retry(retriedFunction, maxRetries, interval, progressive){
 				sleepTime = sleepTime*2;	
 			}
 		}
-		threads.sleep(sleepTime);	
+		java.lang.Thread.sleep(sleepTime);
 	} while(retries < maxretries)
 }

@@ -1,5 +1,5 @@
 var bindingsecrets = require('zeus-applications-java/messages/bindingsecrets');
-var retry = require("zeus-applications-java/commons/retry").retry;
+var retry = require("zeus-applications-java/commons/retry");
 let test=function(){
     var databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
     var databaseUsername = "promart";

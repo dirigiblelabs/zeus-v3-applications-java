@@ -4,7 +4,6 @@ var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');
 var Credentials = require("zeus-deployer/utils/Credentials");
 var SecretsApi = require("kubernetes/api/v1/Secrets");
 var SecretsBuilder = require("kubernetes/builders/api/v1/Secret");
-var k8s = require('zeus-applications-java/commons/k8s');
 
 const zeusServiceBindingLbl = "zeus.servicebinding/service";
 
@@ -30,12 +29,7 @@ exports.applyBindingSecret = function(kserviceName, bindingName, bindingProperti
 	let credentials = Credentials.getDefaultCredentials();
 	let api = new SecretsApi(credentials.server, credentials.token, credentials.namespace);
     logger.debug("creating service binding secret {} for service {}.", secretName, kserviceName);
-	let bindingSecret = api.get(secretName);
-    if (bindingSecret) {
-        //TODO: this must be update instead
-        api.delete(secretName);
-    }
-    api.create(entity);
+    api.apply(entity);
 }
 
 exports.listBindingSecrets = function(kserviceName){
@@ -53,6 +47,6 @@ exports.deleteServiceBindingSecrets = function(kserviceName){
     for(var i=0; i<secrets.length; i++){
         logger.debug("deleting service binding secret {} for service {}", secrets[i].metadata.name, kserviceName);
         let items = api.delete(secrets[i].metadata.name);
-        logger.debug("{} service binding secret for service {} deleted", name, kserviceName);
+        logger.debug("{} service binding secret for service {} deleted", kserviceName);
     }
 }

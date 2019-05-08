@@ -3,11 +3,14 @@ var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');
 var Credentials = require("zeus-deployer/utils/Credentials");
 var KnServicesApi = require("kubernetes/apis/serving.knative.dev/v1alpha1/Services");
 var ServicesApi = require("kubernetes/api/v1/Services");
+var SecretsApi = require("kubernetes/api/v1/Secrets");
 var VirtualServicesApi = require("kubernetes/apis/networking.istio.io/v1alpha3/VirtualServices");
 var threads = require("core/v4/threads");
+var bindingsecrets = require('zeus-applications-java/messages/bindingsecrets');
+var retry = require('zeus-applications-java/commons/retry');
 
 exports.onMessage = function(message) {
-	logger.debug("message received: " + message);
+	logger.debug("message received: {}", message);
 	var messageObject;
 	try{
 		messageObject = JSON.parse(message);	
@@ -32,6 +35,7 @@ exports.onMessage = function(message) {
 		}
 		deleteKnativeService(messageObject.name);
 		deleteVirtualService("route-"+messageObject.name);
+		bindingsecrets.deleteServiceBindingSecrets(messageObject.name);
 	}
 	
 	if (messageObject.operation.toLowerCase() === 'create' || messageObject.operation.toLowerCase() === 'update'){
@@ -43,7 +47,31 @@ exports.onMessage = function(message) {
 			logger.warn("No explicit war file path given. Falling back to application id not implemented yet.");
 			// TODO: implement get from data base or deny such requests
 			return;
-		}		
+		}
+
+		const databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
+		const databaseUsername = "promart";
+		const databasePassword = "Abcd1234";
+		bindingsecrets.applyBindingSecret(messageObject.name, "postgre", {
+			"DefaultDB_driverClassName": "org.postgresql.Driver",
+			"DefaultDB_url": databaseUrl,
+			"DefaultDB_username": databaseUsername,
+			"DefaultDB_password": databasePassword
+		});
+		let credentials = Credentials.getDefaultCredentials();
+		let bindingSecret;
+		let bindingSecretName = messageObject.name+"-postgre";
+		retry(function(retriesCount){
+				retries = retriesCount;
+				let api = new SecretsApi(credentials.server, credentials.token, credentials.namespace);
+				bindingSecret = api.get(messageObject.name+"-postgre");
+				if(bindingSecret){
+					return true;
+				}
+				logger.debug("service binding {} for knative service {}. Wating some more time.", messageObject.name+"-postgre", messageObject.name);
+				return false;
+			}, 3, 10*1000, false);	
+
 		createKnativeService(messageObject.name, messageObject.warFilePath);
 		var serviceName, retries;
 		retry(function(retriesCount){
@@ -68,21 +96,33 @@ exports.onError = function(error) {
 };
 
 function deleteKnativeService(serviceName) {
-	var credentials = Credentials.getDefaultCredentials();
-	var api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
+	let credentials = Credentials.getDefaultCredentials();
+	let api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
 	api.delete(serviceName);
 }
 
-function createKnativeService(serviceName, warUrl) {
-	var sourceUrl = "https://github.com/dirigiblelabs/zeus-v3-sample-war.git";
-	var sourceVersion = "a50a66db2cc9296d9c55499427b28764a05f8be3";
-	var image = "docker.io/dirigiblelabs/" + serviceName + ":latest";
-	
-	var databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
-	var databaseUsername = "promart";
-	var databasePassword = "Abcd1234";
+function createKnativeService(serviceName, warUrl) {	
+	let bindingsSecrets = bindingsecrets.listBindingSecrets(serviceName);
+	let env = [];
+	bindingsSecrets.forEach(function(secret){
+		for (prop in secret.data){
+			env.push({
+				"name": prop,
+				"valueFrom": {
+					"secretKeyRef": {
+						"name": secret.metadata.name,
+						"key": prop
+					}
+				}
+			})
+		}
+	});
 
-	var entity = {
+	const sourceUrl = "https://github.com/dirigiblelabs/zeus-v3-sample-war.git";
+	const sourceVersion = "a50a66db2cc9296d9c55499427b28764a05f8be3";
+	let image = "docker.io/dirigiblelabs/" + serviceName + ":latest";
+
+	let entity = {
 		"apiVersion": "serving.knative.dev/v1alpha1",
 		"kind": "Service",
 		"metadata": {
@@ -129,24 +169,7 @@ function createKnativeService(serviceName, warUrl) {
 	                    },
 	                    "spec": {
 	                        "container": {
-	                            "env": [
-	                                {
-	                                    "name": "DefaultDB_driverClassName",
-	                                    "value": "org.postgresql.Driver"
-	                                },
-	                                {
-	                                    "name": "DefaultDB_url",
-	                                    "value": databaseUrl
-	                                },
-	                                {
-	                                    "name": "DefaultDB_username",
-	                                    "value": databaseUsername
-	                                },
-	                                {
-	                                    "name": "DefaultDB_password",
-	                                    "value": databasePassword
-	                                }
-	                            ],
+	                            "env": env,
 	                            "image": image,
 	                            "imagePullPolicy": "Always",
 	                            "name": "",
@@ -159,9 +182,10 @@ function createKnativeService(serviceName, warUrl) {
 	        }
 	    }
 	};
-	var credentials = Credentials.getDefaultCredentials();
-	var api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
+	let credentials = Credentials.getDefaultCredentials();
+	let api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
 	logger.info("Creating serving.knative.dev/v1alpha1 Service {}", serviceName);
+	logger.debug("{}", entity);
 	return api.create(entity);
 }
 
@@ -169,7 +193,7 @@ function getServiceName(kserviceName) {
 	var credentials = Credentials.getDefaultCredentials();
 	var api = new ServicesApi(credentials.server, credentials.token, 'zeus');
 	logger.debug("Getting service for route with label serving.knative.dev/service: {}", kserviceName);
-	var items = api.list({labelSelector: "serving.knative.dev/service%3D" + kserviceName});
+	let items = api.list({labelSelector: "serving.knative.dev/service%3D" + kserviceName});
 	if (items == undefined || items.length === 0){
 		return;
 	}
@@ -177,8 +201,8 @@ function getServiceName(kserviceName) {
 }
 
 function createVirtualService(appName, serviceName, namespace) {
-	var vservicename = "route-"+appName
-	var entity = {
+	let vservicename = "route-"+appName
+	let entity = {
 	    "apiVersion": "networking.istio.io/v1alpha3",
 	    "kind": "VirtualService",
 	    "metadata": {
@@ -223,35 +247,15 @@ function createVirtualService(appName, serviceName, namespace) {
 	        ]
 	    }
 	};
-	var credentials = Credentials.getDefaultCredentials();
-	var api = new VirtualServicesApi(credentials.server, credentials.token, 'knative-serving');
+	let credentials = Credentials.getDefaultCredentials();
+	let api = new VirtualServicesApi(credentials.server, credentials.token, 'knative-serving');
 	logger.info("Creating networking.istio.io/v1alpha3 VirtualService {}", vservicename);
 	return api.create(entity);
 }
 
 function deleteVirtualService(serviceName){
-	var credentials = Credentials.getDefaultCredentials();
-	var api = new VirtualServicesApi(credentials.server, credentials.token, 'knative-serving');
+	let credentials = Credentials.getDefaultCredentials();
+	let api = new VirtualServicesApi(credentials.server, credentials.token, 'knative-serving');
 	logger.info("Deliting networking.istio.io/v1alpha3 VirtualService {}", serviceName);
 	return api.delete(serviceName);
-}
-
-function retry(retriedFunction, maxRetries, interval, progressive){
-	var maxretries = maxRetries || 5;
-	var retries=0;
-	var sleepTime = interval || 15*1000;
-	do {
-		retries++;
-		if (retriedFunction(retries)) {
-			return;
-		}
-		if(progressive){
-			if (typeof progressive === 'function'){
-				sleepTime = progressive(sleepTime);
-			} else {
-				sleepTime = sleepTime*2;	
-			}
-		}
-		java.lang.Thread.sleep(sleepTime);
-	} while(retries < maxretries)
 }

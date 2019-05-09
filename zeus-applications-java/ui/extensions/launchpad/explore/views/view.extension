@@ -1,5 +1,1 @@
-{
-	"description":"Java Applications View in Launchpad Explore",
-	"extensionPoint":"launchpad-zeus-Explore-view",
-	"module":"zeus-applications-java/ui/extensions/launchpad/explore/views/view.js"
-}
+{"description":"Java Applications View in Launchpad Explore","extensionPoint":"launchpad-zeus-Explore-view","module":"zeus-applications-java/ui/extensions/launchpad/explore/views/view.js"}

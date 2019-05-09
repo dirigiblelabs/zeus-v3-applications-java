@@ -62,7 +62,16 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
 
     this.openNewDialog = function (entity) {
         this.actionType = entity?'update':'new';
-        this.entity = entity || {};
+        this.entity = entity || {
+            bindings:[]
+        };
+        fetch('../../../../../../../../services/v3/js/zeus-bindings/api/bindings.js')
+            .then(function(response){
+                return response.json();
+            })
+            .then(function(bindings) {
+                this.bindings = bindings;
+            }.bind(this));
         toggleEntityModal();
     };
 
@@ -151,6 +160,15 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
             "http://"+ this.entity.name + ".apps.onvms.com"+ path,
             "http://"+ this.entity.name + ".zeus.apps.onvms.com"+ path,
         ];
+    };
+
+    this.addBinding = function(){
+        let binding = this.bindings.find(function(item){
+            return item.name ===  this.selectedBindingName;
+        }.bind(this))
+        if(binding){
+            this.entity.bindings.push(binding);
+        }
     };
     
     $messageHub.onEntityRefresh(this.loadPage);

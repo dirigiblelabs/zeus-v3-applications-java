@@ -76,6 +76,16 @@
 							<label>Docker Image <small>(optional)</small></label>
 							<input type="text" class="form-control" name="dockerFilePath" placeholder="URL of docker image to use for web application runtime" ng-model="pageCtrl.entity.dockerFilePath">
 						</div-->
+						<div class="form-group">
+							<label>Service Bidings</label>
+							<small ng-if="!pageCtrl.entity.bindings" style="display:block;margin-bottom:0.75em">-- No service bindings --</small>
+							<span ng-repeat="binding in pageCtrl.entity.bindings" ng-bind="binding.name" style="display:block;margin-bottom:0.75em"></span>
+							<select name="bindings" id="bindings" ng-model="pageCtrl.selectedBindingName" style="width:90%">
+								<option value="">---Please select---</option>
+								<option ng-repeat="binding in pageCtrl.bindings" value="{{binding.name}}">{{binding.name}}</option>
+							</select>
+							<i class="close fa fa-plus" ng-click="pageCtrl.addBinding()" style="font-size: 1.4em"></i>
+						</div>
 						<div class="form-group" ng-if="pageCtrl.entity.name && pageCtrl.entity.warFileName">
 							<label>Access URLs:</label>
 							<span ng-if="!pageCtrl.entity.id" ng-repeat="url in pageCtrl.getAccessUrls()" ng-bind="url" style="display:block"></span>

@@ -6,6 +6,7 @@ var SecretsApi = require("kubernetes/api/v1/Secrets");
 var SecretsBuilder = require("kubernetes/builders/api/v1/Secret");
 
 const zeusServiceBindingLbl = "zeus.servicebinding/service";
+const zeusServiceBindingTypeLbl = "zeus.servicebinding";
 
 exports.applyBindingSecret = function(kserviceName, bindingName, bindingProperties) {
 	let builder = new SecretsBuilder();
@@ -14,11 +15,13 @@ exports.applyBindingSecret = function(kserviceName, bindingName, bindingProperti
     builder.getMetadata().setNamespace("zeus");
     let labels = {};
     labels[zeusServiceBindingLbl] = kserviceName;
+    labels[zeusServiceBindingTypeLbl] = "true";
+    
     builder.getMetadata().setLabels(labels);
 	builder.setType("kubernetes.io/opaque");
     let secretData = {};
     for (var prop in bindingProperties){
-        if (typeof prop !== 'function'){
+        if (typeof prop !== 'function' && prop!=='notify' && prop!=='notifyAll' && prop!=='wait'){
             secretData[prop] = base64.encode(String(bindingProperties[prop]));
         }
     }
@@ -35,8 +38,12 @@ exports.applyBindingSecret = function(kserviceName, bindingName, bindingProperti
 exports.listBindingSecrets = function(kserviceName){
     let credentials = Credentials.getDefaultCredentials();
 	let api = new SecretsApi(credentials.server, credentials.token, credentials.namespace);
-    let items = api.list({labelSelector: zeusServiceBindingLbl+"%3D" + kserviceName});
-    logger.debug("{} service binding secrets for service {} found", items.length, kserviceName);
+    let selector = {labelSelector: zeusServiceBindingLbl};
+    if (kserviceName!==null && kserviceName!==undefined){
+        selector.labelSelector+="%3D" + kserviceName;
+    }
+    let items = api.listAll(selector);
+    logger.debug("{} service binding secrets{} found", items.length, kserviceName?" for service "+kserviceName:"");
     return items;
 };
 

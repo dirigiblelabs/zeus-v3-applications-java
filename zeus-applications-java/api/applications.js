@@ -6,7 +6,7 @@ var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');
 
 var svc = require('http/v3/rs-data').service()
   .dao(require("zeus-applications-java/data/dao").create().orm);
-  
+
 svc.mappings().create()
 	.onEntityInsert(function(entity, ctx){
 	    entity.user = require("security/v3/user").getName();
@@ -17,6 +17,7 @@ svc.mappings().create()
 			var message = {
 			  warFilePath: entity.warFilePath,
 			  name: entity.name,
+			  bindings: JSON.stringify(entity.bindings),
 			  id: ids,
 			  operation: 'create'
 			};
@@ -33,6 +34,7 @@ svc.mappings().update()
 			var message = {
 			  warFilePath: entity.warFilePath,
 			  id: entity.id,
+			  bindings: JSON.stringify(entity.bindings),
 			  operation: 'update'
 			};
 			logger.debug('sending message: {}', JSON.stringify(message));

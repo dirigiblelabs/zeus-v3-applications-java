@@ -78,13 +78,33 @@
 						</div-->
 						<div class="form-group">
 							<label>Service Bidings</label>
-							<small ng-if="!pageCtrl.entity.bindings" style="display:block;margin-bottom:0.75em">-- No service bindings --</small>
-							<span ng-repeat="binding in pageCtrl.entity.bindings" ng-bind="binding.name" style="display:block;margin-bottom:0.75em"></span>
-							<select name="bindings" id="bindings" ng-model="pageCtrl.selectedBindingName" style="width:90%">
-								<option value="">---Please select---</option>
-								<option ng-repeat="binding in pageCtrl.bindings" value="{{binding.name}}">{{binding.name}}</option>
-							</select>
-							<i class="close fa fa-plus" ng-click="pageCtrl.addBinding()" style="font-size: 1.4em"></i>
+							<small ng-if="!pageCtrl.entity.bindings || pageCtrl.entity.bindings.length===0" style="display:block;margin-bottom:0.75em">-- No service bindings --</small>
+							<div ng-if="pageCtrl.entity.bindings" ng-repeat="binding in pageCtrl.entity.bindings" style="margin-bottom: 10px;margin-bottom:0.75em">
+								<span ng-bind="binding.name"></span> for service <span ng-bind="binding.service"></span>
+								<i ng-if="pageCtrl.entity.bindings" class="close fa fa-minus" ng-click="pageCtrl.removeBinding(binding)" style="font-size: 1.4em"></i>
+							</div>
+							<div ng-controller="BindingsController as bindingCtrl" style="display: flex;flex-flow: row;justify-content: space-between;">
+								<input id="services" type="text" placeholder="Type to select service" class="form-control" ng-required pattern="[a-zA-Z0-9_]{1,65}" data-rule-alphanumeric="^\w+$" 
+										ng-model="bindingCtrl.service"
+										ng-model-options="{debounce: 500, blur: 250}"
+										typeahead-show-hint = "true"
+										typeahead-select-on-exact = "true"
+										typeahead-focus-first = "false"
+										typeahead-on-select = "bindingCtrl.onServiceSelectChange($item)"
+										typeahead-min-length = "0"
+										uib-typeahead="item as item.name for item in bindingCtrl.services"
+										style="flex: 1 1 auto">
+								<input id="bindings" type="text" placeholder="Type to select binding" class="form-control" ng-required pattern="[a-zA-Z0-9_]{1,65}" data-rule-alphanumeric="^\w+$" 
+										ng-model="bindingCtrl.binding"
+										ng-model-options="{debounce: 500, blur: 250}"
+										typeahead-show-hint = "true"
+										typeahead-select-on-exact = "true"
+										typeahead-focus-first = "false"
+										typeahead-min-length = "0"										
+										uib-typeahead="item as item.name for item in bindingCtrl.bindings"
+										style="flex: 1 1 auto">	
+								<i class="close fa fa-plus" ng-click="bindingCtrl.addBinding(pageCtrl.entity)" style="font-size: 1.4em"></i>
+							</div>
 						</div>
 						<div class="form-group" ng-if="pageCtrl.entity.name && pageCtrl.entity.warFileName">
 							<label>Access URLs:</label>
@@ -129,7 +149,9 @@
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/resources/angular/1.4.7/angular-resource.min.js"></script>
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/message-hub.js"></script>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular-animate.min.js"></script>
-	<script type="text/javascript" src="https://angular-ui.github.io/bootstrap/ui-bootstrap-tpls-0.14.3.js"></script>
+	<!-- <script type="text/javascript" src="https://angular-ui.github.io/bootstrap/ui-bootstrap-tpls-0.14.3.js"></script> -->
+	<script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/1.3.3/ui-bootstrap.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/1.3.3/ui-bootstrap-tpls.min.js"></script>
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-layout.js"></script>
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-core-ng-modules.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-file-upload/2.3.4/angular-file-upload.js"></script>	

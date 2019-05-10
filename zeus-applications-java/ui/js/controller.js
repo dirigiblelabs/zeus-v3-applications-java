@@ -18,7 +18,7 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
 .config(["CmisProvider", function(cmisProvider) {
   cmisProvider.baseUrl = 'https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api';
 }])
-.controller('PageController', ['Entity', '$messageHub', 'Cmis', function (Entity, $messageHub, Cmis) {
+.controller('PageController', ['Entity', '$messageHub', 'Cmis', '$http', function (Entity, $messageHub, Cmis, $http) {
 
     this.dataPage = 1;
     this.dataCount = 0;
@@ -65,13 +65,12 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
         this.entity = entity || {
             bindings:[]
         };
-        fetch('../../../../../../../../services/v3/js/zeus-bindings/api/bindings.js')
-            .then(function(response){
-                return response.json();
-            })
-            .then(function(bindings) {
-                this.bindings = bindings;
-            }.bind(this));
+        if(this.entity.name){
+            this.entity.bindings =$http.get('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js/'+entity.name)
+                .then(function(r) {
+                    this.entity.bindings = r.data.bindings;
+                }.bind(this));
+        }
         toggleEntityModal();
     };
 
@@ -162,14 +161,9 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
         ];
     };
 
-    this.addBinding = function(){
-        let binding = this.bindings.find(function(item){
-            return item.name ===  this.selectedBindingName;
-        }.bind(this))
-        if(binding){
-            this.entity.bindings.push(binding);
-        }
-    };
+    this.removeBinding = function(binding){
+        this.entity.bindings = this.entity.bindings.filter( el => el.name !== binding.name );
+    }.bind(this);
     
     $messageHub.onEntityRefresh(this.loadPage);
 
@@ -180,4 +174,34 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
     }.bind(this);
     
     this.loadPage(this.dataPage);
+}])
+.controller('BindingsController', [function () {
+    this.services = fetch('../../../../../../../../services/v3/js/zeus-services/api/services.js')
+        .then(function(response){
+            return response.json();
+        })
+        .then(function(services) {
+            this.services = services;
+        }.bind(this));
+    this.bindings = fetch('../../../../../../../../services/v3/js/zeus-bindings/api/bindings.js')
+        .then(function(response){
+            return response.json();
+        })
+        .then(function(bindings) {
+            this.bindings = bindings;
+        }.bind(this));
+    this.onServiceSelectChange = function(){
+        this.bindings = this.bindings.filter(function(binding){
+            return binding.service !== this.serviceName;
+        }.bind(this));
+    }.bind(this);
+    this.addBinding = function(entity){
+        if(this.binding){
+            if(!entity.bindings){
+                entity.bindings = [];
+            }
+            entity.bindings.push(this.binding);
+            delete this.binding;
+        }
+    }.bind(this);
 }]);

@@ -1,12 +1,12 @@
 var logging = require('log/v4/logging');
-var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');	
+var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');
 var Credentials = require("zeus-deployer/utils/Credentials");
 var KnServicesApi = require("kubernetes/apis/serving.knative.dev/v1alpha1/Services");
 var ServicesApi = require("kubernetes/api/v1/Services");
 var SecretsApi = require("kubernetes/api/v1/Secrets");
 var VirtualServicesApi = require("kubernetes/apis/networking.istio.io/v1alpha3/VirtualServices");
-var threads = require("core/v4/threads");
 var bindingsecrets = require('zeus-applications-java/messages/bindingsecrets');
+var bindings = require('zeus-bindings/k8s');
 var retry = require('zeus-applications-java/commons/retry');
 
 exports.onMessage = function(message) {
@@ -48,31 +48,35 @@ exports.onMessage = function(message) {
 			// TODO: implement get from data base or deny such requests
 			return;
 		}
+		let _bindings;
+		if (messageObject.bindings){
+			_bindings = JSON.parse(messageObject.bindings);
+		}
 
-		const databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
-		const databaseUsername = "promart";
-		const databasePassword = "Abcd1234";
-		bindingsecrets.applyBindingSecret(messageObject.name, "postgre", {
-			"DefaultDB_driverClassName": "org.postgresql.Driver",
-			"DefaultDB_url": databaseUrl,
-			"DefaultDB_username": databaseUsername,
-			"DefaultDB_password": databasePassword
-		});
-		let credentials = Credentials.getDefaultCredentials();
-		let bindingSecret;
-		let bindingSecretName = messageObject.name+"-postgre";
-		retry(function(retriesCount){
-				retries = retriesCount;
-				let api = new SecretsApi(credentials.server, credentials.token, credentials.namespace);
-				bindingSecret = api.get(messageObject.name+"-postgre");
-				if(bindingSecret){
-					return true;
-				}
-				logger.debug("service binding {} for knative service {}. Wating some more time.", messageObject.name+"-postgre", messageObject.name);
-				return false;
-			}, 3, 10*1000, false);	
+		// const databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
+		// const databaseUsername = "promart";
+		// const databasePassword = "Abcd1234";
+		// bindingsecrets.applyBindingSecret(messageObject.name, "postgre", {
+		// 	"DefaultDB_driverClassName": "org.postgresql.Driver",
+		// 	"DefaultDB_url": databaseUrl,
+		// 	"DefaultDB_username": databaseUsername,
+		// 	"DefaultDB_password": databasePassword
+		// });
+		// let credentials = Credentials.getDefaultCredentials();
+		// let bindingSecret;
+		// let bindingSecretName = messageObject.name+"-postgre";
+		// retry(function(retriesCount){
+		// 		retries = retriesCount;
+		// 		let api = new SecretsApi(credentials.server, credentials.token, credentials.namespace);
+		// 		bindingSecret = api.get(messageObject.name+"-postgre");
+		// 		if(bindingSecret){
+		// 			return true;
+		// 		}
+		// 		logger.debug("service binding {} for knative service {}. Wating some more time.", messageObject.name+"-postgre", messageObject.name);
+		// 		return false;
+		// 	}, 3, 10*1000, false);	
 
-		createKnativeService(messageObject.name, messageObject.warFilePath);
+		createKnativeService(messageObject.name, messageObject.warFilePath, _bindings);
 		var serviceName, retries;
 		retry(function(retriesCount){
 			retries = retriesCount;
@@ -101,22 +105,29 @@ function deleteKnativeService(serviceName) {
 	api.delete(serviceName);
 }
 
-function createKnativeService(serviceName, warUrl) {	
-	let bindingsSecrets = bindingsecrets.listBindingSecrets(serviceName);
+function createKnativeService(serviceName, warUrl, bindings) {
+	// let bindingsSecrets = bindingsecrets.listBindingSecrets(serviceName);
+
 	let env = [];
-	bindingsSecrets.forEach(function(secret){
-		for (prop in secret.data){
-			env.push({
-				"name": prop,
-				"valueFrom": {
-					"secretKeyRef": {
-						"name": secret.metadata.name,
-						"key": prop
+	let annotations = {}
+	if(bindings){
+		bindings.forEach(function(secret){
+			for (prop in secret.properties){
+				env.push({
+					"name": prop,
+					"valueFrom": {
+						"secretKeyRef": {
+							"name": secret.name,
+							"key": prop
+						}
 					}
-				}
-			})
-		}
-	});
+				})
+			}
+		});
+		annotations["zeus.service/bindings"] = bindings.map(function(elem){
+													return elem.name;
+												}).join(",");
+	}
 
 	const sourceUrl = "https://github.com/dirigiblelabs/zeus-v3-sample-war.git";
 	const sourceVersion = "a50a66db2cc9296d9c55499427b28764a05f8be3";
@@ -128,6 +139,7 @@ function createKnativeService(serviceName, warUrl) {
 		"metadata": {
 	        "name": serviceName,
 	        "namespace": "zeus",
+			"annotations": annotations,
 	    },
 	    "spec": {
 	        "runLatest": {

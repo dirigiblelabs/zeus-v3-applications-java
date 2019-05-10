@@ -34,8 +34,9 @@ svc.mappings().update()
 			var message = {
 			  warFilePath: entity.warFilePath,
 			  id: entity.id,
+			  name: entity.name,
 			  bindings: JSON.stringify(entity.bindings),
-			  operation: 'update'
+			  operation: 'update'			  
 			};
 			logger.debug('sending message: {}', JSON.stringify(message));
 			messagesTopic.send(JSON.stringify(message));

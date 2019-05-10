@@ -48,10 +48,6 @@ exports.onMessage = function(message) {
 			// TODO: implement get from data base or deny such requests
 			return;
 		}
-		let _bindings;
-		if (messageObject.bindings){
-			_bindings = JSON.parse(messageObject.bindings);
-		}
 
 		// const databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
 		// const databaseUsername = "promart";
@@ -74,9 +70,13 @@ exports.onMessage = function(message) {
 		// 		}
 		// 		logger.debug("service binding {} for knative service {}. Wating some more time.", messageObject.name+"-postgre", messageObject.name);
 		// 		return false;
-		// 	}, 3, 10*1000, false);	
+		// 	}, 3, 10*1000, false);
 
-		createKnativeService(messageObject.name, messageObject.warFilePath, _bindings);
+		if (messageObject.bindings){
+			messageObject.bindings = JSON.parse(messageObject.bindings);
+		}
+
+		createKnativeService(messageObject.name, messageObject.warFilePath, messageObject.bindings);
 		var serviceName, retries;
 		retry(function(retriesCount){
 			retries = retriesCount;
@@ -106,8 +106,6 @@ function deleteKnativeService(serviceName) {
 }
 
 function createKnativeService(serviceName, warUrl, bindings) {
-	// let bindingsSecrets = bindingsecrets.listBindingSecrets(serviceName);
-
 	let env = [];
 	let annotations = {}
 	if(bindings){
@@ -198,7 +196,7 @@ function createKnativeService(serviceName, warUrl, bindings) {
 	let api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
 	logger.info("Creating serving.knative.dev/v1alpha1 Service {}", serviceName);
 	logger.debug("{}", entity);
-	return api.create(entity);
+	return api.apply(entity);
 }
 
 function getServiceName(kserviceName) {

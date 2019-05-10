@@ -175,24 +175,18 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
     
     this.loadPage(this.dataPage);
 }])
-.controller('BindingsController', [function () {
-    this.services = fetch('../../../../../../../../services/v3/js/zeus-services/api/services.js')
+.controller('BindingsController', ['$http', function($http) {
+    this.services = $http.get('../../../../../../../../services/v3/js/zeus-services/api/services.js')
         .then(function(response){
-            return response.json();
-        })
-        .then(function(services) {
-            this.services = services;
+            this.services = response.data;
         }.bind(this));
-    this.bindings = fetch('../../../../../../../../services/v3/js/zeus-bindings/api/bindings.js')
+    this.bindings = $http.get('../../../../../../../../services/v3/js/zeus-bindings/api/bindings.js')
         .then(function(response){
-            return response.json();
-        })
-        .then(function(bindings) {
-            this.bindings = bindings;
+            this.bindings = response.data;
         }.bind(this));
     this.onServiceSelectChange = function(){
         this.bindings = this.bindings.filter(function(binding){
-            return binding.service !== this.serviceName;
+            return binding.service !== this.service.name;
         }.bind(this));
     }.bind(this);
     this.addBinding = function(entity){
@@ -202,6 +196,7 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
             }
             entity.bindings.push(this.binding);
             delete this.binding;
+            delete this.service;
         }
     }.bind(this);
 }]);

@@ -4,5 +4,16 @@
 		"type": "git",
 		"branch": "master",
 		"url": "https://github.com/dirigiblelabs/zeus-v3-java.git"
-	}
+	},
+	"dependencies": [{
+		"guid": "kubernetes",
+		"type": "git",
+		"branch": "master",
+		"url": "https://github.com/dirigiblelabs/client-kubernetes.git"
+	},{
+		"guid": "zeus-bindings",
+		"type": "git",
+		"branch": "master",
+		"url": "https://github.com/dirigiblelabs/zeus-v3-bindings.git"
+	}]
 }

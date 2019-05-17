@@ -4,7 +4,6 @@ var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');
 var rs = require('http/v4/rs');
 var producer = require('messaging/v3/producer');
 var messagesTopic = producer.topic("/zeus-applications-java/control");
-var bindings = require('zeus-bindings/k8s');
 var apierrors = require("kubernetes/errors");
 var selectorsApi = require("kubernetes/labelselectors");
 var Credentials = require("zeus-deployer/utils/Credentials");
@@ -170,7 +169,7 @@ function toResource(entity) {
 	                                },
 	                                {
 	                                    "name": "ARG",
-	                                    "value": "WAR_URL=https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api/read/document/download?path=" + entity.warFileName
+	                                    "value": "WAR_URL=https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api/read/document/download?path=/" + entity.warFileName
 	                                }
 	                            ],
 	                            "name": "kaniko-war-template"

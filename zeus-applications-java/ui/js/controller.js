@@ -22,12 +22,20 @@ angular.module('page', ['ngAnimate', 'ideUiCore', 'ngRsData', 'ui.bootstrap','ng
     let get = function(name){
         return $http.get('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js/'+name)
             .then(function(response){
+                response.data = response.data.map(function(svc){
+                    svc.status = transformStatus(svc.status);
+                    return svc;
+                });
                 return response.data;
             });
     };
     let list = function(){
         return $http.get('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js')
             .then(function(response){
+                response.data = response.data.map(function(svc){
+                    svc.status = transformStatus(svc.status);
+                    return svc;
+                });
                 return response.data;
             });
     };
@@ -40,24 +48,85 @@ angular.module('page', ['ngAnimate', 'ideUiCore', 'ngRsData', 'ui.bootstrap','ng
     let remove = function(entity){
         return $http.delete('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js/'+entity.name);
     };
+    // let status = function(){
+    //     return $http.get('../../../../../../../../services/v3/js/zeus-applications-java/api/status.js');
+    // };
+    let transformStatus = function(stat) {
+        let o = {};
+        if(stat){
+            if(!stat["knsvc-ready"] && !stat['virtualservice']){
+                return {
+                    progress: 1,
+                    status: "Ready"
+                };
+            }
+            let progress = 0;
+            if (stat['knsvc-configready']){
+                progress += 0.5;
+            }
+            if (stat['knsvc-routeready']){
+                progress += 0.25;
+            }
+            if (stat['virtualservice']){
+                progress += 0.25;
+            }             
+            o.progress = progress;
+            o.status = stat['knsvc-ready'];
+            if (o.status !== 'Failure'){
+              if (!stat['virtualservice']){ 
+                 o.status = "In progress";
+              } else {
+                  o.status = "Ready";
+              }
+            }
+            if(stat['knsvc-ready']!=='True'){
+                o.reason = stat['knsvc-ready-reason']
+            } else if(!stat['virtualservice']){
+                o.reason = 'Custom URL not ready.'
+            }
+        }
+        return o;
+    }
     return {
         get: get,
         list: list,
         save: save,
         update: update,
-        delete: remove
+        delete: remove,
+        // status: status
     }
 }])
 .service('StatusCheck',  ['$scope', '$interval', 'Service', function($scope, $interval, Service){
     var observables = [];
     var cancellable = $interval(function(){
-        observable.forEach(function(o){
-            if(o.status.progress<1){
-                Service.get(o.name)
-                .then(function(s){
-                    o.status = s.status;
-                });
-            }
+        Service.status()
+        .then(function(stat){
+            observable.forEach(function(o){
+                if(!o.status){
+                    o.status = {};
+                }
+                if(stat[o.name]!==undefined){
+                    let progress = 0;
+                    if (stat['knsvc-configready']){
+                        progress += 0.5;
+                    }
+                    if (stat['knsvc-routeready']){
+                        progress += 0.25;
+                    }
+                    if (stat['virtualservice']){
+                        progress += 0.25;
+                    }             
+                    o.status.progress = progress;
+                    stat = stat['knsvc-ready'];
+                    if (stat === 'Unknown'){
+                        stat = "In progress"
+                    }
+                    o.status.status = stat;
+                    if(stat!=='Ready'){
+                        o.status.reason = stat['knsvc-ready-reason']
+                    }
+                }
+            });
         });
     }, 30*1000);
     $scope.$on('$destroy', function () {
@@ -97,19 +166,13 @@ angular.module('page', ['ngAnimate', 'ideUiCore', 'ngRsData', 'ui.bootstrap','ng
         Service.list()
             .then(function(data){
                 this.data = data;
-                this.interval = $interval(function(self){
-                    self.data = Service.list();
-                }, 30*1000, this)
-                $scope.$on('$destroy', function () {
-                    $interval.cancel(this.interval);
-                }.bind(this));
             }.bind(this))
             .catch(function (err) {
 	               if (err.data){
 		            	console.error(err.data);
 		            }
 		            console.error(err);
-	            });
+	            })
         // return Entity.query({
 		//             $limit: this.dataLimit,
 		//             $offset: (this.dataPage - 1) * this.dataLimit

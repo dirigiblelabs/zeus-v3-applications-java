@@ -4,6 +4,8 @@ var logger = logging.getLogger('org.eclipse.dirigible.zeus.apps.java');
 var rs = require('http/v4/rs');
 var producer = require('messaging/v3/producer');
 var messagesTopic = producer.topic("/zeus-applications-java/control");
+var appStatus = require('zeus-applications-java/api/status')
+var bindings = require("zeus-bindings/k8s");
 var apierrors = require("kubernetes/errors");
 var selectorsApi = require("kubernetes/labelselectors");
 var Credentials = require("zeus-deployer/utils/Credentials");
@@ -70,7 +72,6 @@ function fromResource(resource){
         address: resource.status.domain,
         latestReadyRevision: resource.status.latestReadyRevisionName,
         lastModifiedTime: getLastModifiedTime(resource),
-        status: getStatus(resource)
     };
     if(resource.status.address){
         _e.clusterAddress = resource.status.address.hostname;
@@ -101,6 +102,10 @@ function fromResource(resource){
                     return v.startsWith('path=');
                 });
                 _e.warFileName = path.split('=')[1];
+                while(_e.warFileName.startsWith('/')){
+                    _e.warFileName = _e.warFileName.substring(1);
+                }
+                _e.warFile = path.split('=')[1];
             }
         }
     }
@@ -220,9 +225,10 @@ var messageProducer = {
     onCreate: function(knservice){
         if (knservice){
 			var message = {
-			  name: knservice.metadata.name,
-			  bindings: JSON.stringify(knservice.metadata.annotations["zeus.service/bindings"]),
-			  operation: 'create'
+               service: JSON.stringify(knservice),
+			//   name: knservice.metadata.name,
+			//   bindings: JSON.stringify(knservice.metadata.annotations["zeus.service/bindings"]),
+			   operation: 'create'
 			};
 			logger.debug('sending message: {}', JSON.stringify(message));
 			messagesTopic.send(JSON.stringify(message));
@@ -231,8 +237,9 @@ var messageProducer = {
     onUpdate: function(knservice){
         if (knservice){
 			var message = {
-			  name: knservice.metadata.name,
-			  bindings: JSON.stringify(knservice.metadata.annotations["zeus.service/bindings"]),
+                service: JSON.stringify(knservice),
+			//   name: knservice.metadata.name,
+			//   bindings: JSON.stringify(knservice.metadata.annotations["zeus.service/bindings"]),
 			  operation: 'update'			  
 			};
 			logger.debug('sending message: {}', JSON.stringify(message));
@@ -258,11 +265,17 @@ rs.service()
             try{
                 let credentials = Credentials.getDefaultCredentials();
 	            let api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
-                let selectors = new selectorsApi();
-                let opts = {
-                        labelSelector: selectors.label('zeus.servicebinding/service')
-                    };
-                let items = api.list(opts).map(fromResource);
+                //let selectors = new selectorsApi();
+                // let opts = {
+                //         labelSelector: selectors.label('zeus.servicebinding/service')
+                //     };
+                let resources = api.list();
+                var statuses = appStatus(resources);
+                let items = resources.map(fromResource);
+                items = items.map(function(item){
+                    item.status = statuses[item.name] || {};
+                    return item;
+                });
                 let payload = JSON.stringify(items,null,2);
                 response.println(payload);
             } catch (err){
@@ -298,6 +311,8 @@ rs.service()
 	            let api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
                 let entity = api.get(name);
                 let payloadObj = fromResource(entity);
+                var statuses = appStatus();
+                payloadObj.status = statuses[payloadObj.name] || {};
                 if (payloadObj.bindings){
                     let b = new bindings();
                     let arr = b.list().filter(function(binding){

@@ -35,7 +35,8 @@ function status(){
     var statusrecord = statusesDao.list()[0] || {};
     logger.debug("status record: {}", JSON.stringify(statusrecord,null,2))
     logger.debug("synchronizing status records. removing resources with status ready")
-    var readyknsvcs = getKnServices().filter(function(svc){
+    var knsvcs = getKnServices();
+    var readyknsvcs = knsvcs.filter(function(svc){
         return KnserviceConditionStatus(svc, 'Ready') === 'True'
     });
     var invalidatedKeys = Object.keys(statusrecord).filter(function(svcname){

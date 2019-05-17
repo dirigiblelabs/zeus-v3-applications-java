@@ -38,7 +38,10 @@
 					<td>{{pageCtrl.parseDate(next.createTime) | date: 'medium'}}</td>
 					<td>{{pageCtrl.parseDate(next.lastModifiedTime) || pageCtrl.parseDate(next.createTime) | date: 'medium'}}</td>
 					<td>{{next.creator||next.knCreator}}</td>
-					<td><i ng-show="next.status.progress < 1" class="fa fa-gear fa-spin fade-out" style="font-size:1.4em" title="Hold tight! We're getting the application ready for you..."></i></td>
+					<td>
+						<i ng-if="next.status.progress<1 && next.status!=='Failure'" class="fa fa-gear fa-spin fade-out" style="font-size:1.4em" title="Hold tight! We're getting the application ready for you...{{next.status.reason}} {{next.status.progress*100}}%"></i>
+						<i ng-if="next.status && next.status==='Failure'" class="fa fa-alert fade-out" style="font-size:1.4em" title="Progress: {{next.status.progress*100}}%, Failure: {{next.status.reason}}"></i>
+					</td>
 					<td>
 						<i class="close fa fa-remove" ng-click="pageCtrl.openDeleteDialog(next)" style="font-size: 1.4em"></i>
 						<i class="close fa fa-bars" ng-click="pageCtrl.openNewDialog(next)" style="margin-right: 0.5em; font-size: 1.4em"></i>

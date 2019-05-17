@@ -35,19 +35,19 @@ exports.onMessage = function(message) {
 		}
 		deleteKnativeService(messageObject.name);
 		deleteVirtualService("route-"+messageObject.name);
-		bindingsecrets.deleteServiceBindingSecrets(messageObject.name);
+		//bindingsecrets.deleteServiceBindingSecrets(messageObject.name);
 	}
 	
 	if (messageObject.operation.toLowerCase() === 'create' || messageObject.operation.toLowerCase() === 'update'){
-		if (messageObject.warFilePath == undefined){
-			if (messageObject.id == undefined){
-				logger.error("No explicit war file path or application id specified in the message object. Can not handle.");
-				throw Error("No explicit war file path or application id specified in the message object. Can not handle.");
-			}
-			logger.warn("No explicit war file path given. Falling back to application id not implemented yet.");
-			// TODO: implement get from data base or deny such requests
-			return;
-		}
+		// if (messageObject.warFilePath == undefined){
+		// 	if (messageObject.id == undefined){
+		// 		logger.error("No explicit war file path or application id specified in the message object. Can not handle.");
+		// 		throw Error("No explicit war file path or application id specified in the message object. Can not handle.");
+		// 	}
+		// 	logger.warn("No explicit war file path given. Falling back to application id not implemented yet.");
+		// 	// TODO: implement get from data base or deny such requests
+		// 	return;
+		// }
 
 		// const databaseUrl = "jdbc:postgresql://promart.cbzkdfbpc8mj.eu-central-1.rds.amazonaws.com/promart";
 		// const databaseUsername = "promart";
@@ -72,15 +72,18 @@ exports.onMessage = function(message) {
 		// 		return false;
 		// 	}, 3, 10*1000, false);
 
-		if (messageObject.bindings){
-			messageObject.bindings = JSON.parse(messageObject.bindings);
-		}
+		// if (messageObject.bindings){
+		// 	messageObject.bindings = JSON.parse(messageObject.bindings);
+		// }
 
-		createKnativeService(messageObject.name, messageObject.warFilePath, messageObject.bindings);
+		let knservice = JSON.parse(messageObject.service);
+
+		createKnativeService(knservice);
+
 		var serviceName, retries;
 		retry(function(retriesCount){
 			retries = retriesCount;
-			serviceName = getServiceName(messageObject.name);
+			serviceName = getServiceName(knservice.metadata.name);
 			if(serviceName){
 				logger.debug("Service for knative service route: {}", serviceName);
 				return true;
@@ -89,9 +92,9 @@ exports.onMessage = function(message) {
 			return false;
 		}, 5, 30*1000, false);
 		if (!serviceName){
-			logger.error("Route service for knative service {} not ready after {} retries. Giving up to create VirtualService for it.", messageObject.name, retries);
+			logger.error("Route service for knative service {} not ready after {} retries. Giving up to create VirtualService for it.", knservice.metadata.name, retries);
 		}
-		createVirtualService(messageObject.name, serviceName, 'zeus');
+		createVirtualService(knservice.metadata.name, serviceName, 'zeus');
 	}
 };
 
@@ -105,98 +108,98 @@ function deleteKnativeService(serviceName) {
 	api.delete(serviceName);
 }
 
-function createKnativeService(serviceName, warUrl, bindings) {
-	let env = [];
-	let annotations = {}
-	if(bindings){
-		bindings.forEach(function(secret){
-			for (prop in secret.properties){
-				env.push({
-					"name": prop,
-					"valueFrom": {
-						"secretKeyRef": {
-							"name": secret.name,
-							"key": prop
-						}
-					}
-				})
-			}
-		});
-		annotations["zeus.service/bindings"] = bindings.map(function(elem){
-													return elem.name;
-												}).join(",");
-	}
+ function createKnativeService(knservice) {
+// 	let env = [];
+// 	let annotations = {}
+// 	if(bindings){
+// 		bindings.forEach(function(secret){
+// 			for (prop in secret.properties){
+// 				env.push({
+// 					"name": prop,
+// 					"valueFrom": {
+// 						"secretKeyRef": {
+// 							"name": secret.name,
+// 							"key": prop
+// 						}
+// 					}
+// 				})
+// 			}
+// 		});
+// 		annotations["zeus.service/bindings"] = bindings.map(function(elem){
+// 													return elem.name;
+// 												}).join(",");
+// 	}
 
-	const sourceUrl = "https://github.com/dirigiblelabs/zeus-v3-sample-war.git";
-	const sourceVersion = "a50a66db2cc9296d9c55499427b28764a05f8be3";
-	let image = "docker.io/dirigiblelabs/" + serviceName + ":latest";
+// 	const sourceUrl = "https://github.com/dirigiblelabs/zeus-v3-sample-war.git";
+// 	const sourceVersion = "a50a66db2cc9296d9c55499427b28764a05f8be3";
+// 	let image = "docker.io/dirigiblelabs/" + serviceName + ":latest";
 
-	let entity = {
-		"apiVersion": "serving.knative.dev/v1alpha1",
-		"kind": "Service",
-		"metadata": {
-	        "name": serviceName,
-	        "namespace": "zeus",
-			"annotations": annotations,
-	    },
-	    "spec": {
-	        "runLatest": {
-	            "configuration": {
-	                "build": {
-	                    "apiVersion": "build.knative.dev/v1alpha1",
-	                    "kind": "Build",
-	                    "spec": {
-	                        "serviceAccountName": "kneo",
-	                        "source": {
-	                            "git": {
-	                                "revision": sourceVersion,
-	                                "url": sourceUrl
-	                            }
-	                        },
-	                        "template": {
-	                            "arguments": [
-	                                {
-	                                    "name": "IMAGE",
-	                                    "value": image,
-	                                },
-	                                {
-	                                    "name": "ARG",
-	                                    "value": "WAR_URL=https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api/read/document/download?path=/" + warUrl
-	                                }
-	                            ],
-	                            "name": "kaniko-war-template"
-	                        }
-	                    },
-	                    "timeout": "10m"
-	                },
-	                "revisionTemplate": {
-	                    "metadata": {
-	                        "annotations": {
-	                            "autoscaling.knative.dev/maxScale": "10",
-	                            "autoscaling.knative.dev/minScale": "1"
-	                        },
-	                        "creationTimestamp": null
-	                    },
-	                    "spec": {
-	                        "container": {
-	                            "env": env,
-	                            "image": image,
-	                            "imagePullPolicy": "Always",
-	                            "name": "",
-	                            "resources": {}
-	                        },
-	                        "timeoutSeconds": 300
-	                    }
-	                }
-	            }
-	        }
-	    }
-	};
-	let credentials = Credentials.getDefaultCredentials();
-	let api = new KnServicesApi(credentials.server, credentials.token, 'zeus');
-	logger.info("Creating serving.knative.dev/v1alpha1 Service {}", serviceName);
-	logger.debug("{}", entity);
-	return api.apply(entity);
+// 	let entity = {
+// 		"apiVersion": "serving.knative.dev/v1alpha1",
+// 		"kind": "Service",
+// 		"metadata": {
+// 	        "name": serviceName,
+// 	        "namespace": "zeus",
+// 			"annotations": annotations,
+// 	    },
+// 	    "spec": {
+// 	        "runLatest": {
+// 	            "configuration": {
+// 	                "build": {
+// 	                    "apiVersion": "build.knative.dev/v1alpha1",
+// 	                    "kind": "Build",
+// 	                    "spec": {
+// 	                        "serviceAccountName": "kneo",
+// 	                        "source": {
+// 	                            "git": {
+// 	                                "revision": sourceVersion,
+// 	                                "url": sourceUrl
+// 	                            }
+// 	                        },
+// 	                        "template": {
+// 	                            "arguments": [
+// 	                                {
+// 	                                    "name": "IMAGE",
+// 	                                    "value": image,
+// 	                                },
+// 	                                {
+// 	                                    "name": "ARG",
+// 	                                    "value": "WAR_URL=https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api/read/document/download?path=/" + warUrl
+// 	                                }
+// 	                            ],
+// 	                            "name": "kaniko-war-template"
+// 	                        }
+// 	                    },
+// 	                    "timeout": "10m"
+// 	                },
+// 	                "revisionTemplate": {
+// 	                    "metadata": {
+// 	                        "annotations": {
+// 	                            "autoscaling.knative.dev/maxScale": "10",
+// 	                            "autoscaling.knative.dev/minScale": "1"
+// 	                        },
+// 	                        "creationTimestamp": null
+// 	                    },
+// 	                    "spec": {
+// 	                        "container": {
+// 	                            "env": env,
+// 	                            "image": image,
+// 	                            "imagePullPolicy": "Always",
+// 	                            "name": "",
+// 	                            "resources": {}
+// 	                        },
+// 	                        "timeoutSeconds": 300
+// 	                    }
+// 	                }
+// 	            }
+// 	        }
+// 	    }
+// 	};
+ 	let credentials = Credentials.getDefaultCredentials();
+ 	let api = new KnServicesApi(credentials.server, credentials.token, knservice.metadata.namespace);
+ 	logger.info("Creating serving.knative.dev/v1alpha1 Service {}/{}", knservice.metadata.namespace, knservice.metadata.name);
+ 	logger.debug("{}", JSON.stringify(knservice,null,2));
+ 	return api.apply(knservice);
 }
 
 function getServiceName(kserviceName) {

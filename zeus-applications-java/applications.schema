@@ -102,6 +102,48 @@
                         "scale": null
                     }
                 ]
+            },
+            {
+                "name": "ZEUS_APPLICATIONS_JAVA_STATUS",
+                "type": "TABLE",
+                "columns": [
+                    {
+                        "name": "APP00J_ID",
+                        "type": "INTEGER",
+                        "length": 0,
+                        "nullable": true,
+                        "primaryKey": "true",
+                        "identity": "true",
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APP00J_STATUS",
+                        "type": "VARCHAR",
+                        "length": "2048",
+                        "nullable": true,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    },
+                    {
+                        "name": "APP00J_LASTUPDATE_TIME",
+                        "type": "BIGINT",
+                        "length": "0",
+                        "nullable": true,
+                        "primaryKey": false,
+                        "identity": false,
+                        "unique": false,
+                        "defaultValue": null,
+                        "precision": null,
+                        "scale": null
+                    }
+                ]
             }
         ]
     }

@@ -1,0 +1,1 @@
+{"expression":"0/10 * * * * ?","group":"dirigible-defined","handler":"zeus-applications-java/jobs/knservicewatch.js","description":"Java applications k8s resources status watcher"}

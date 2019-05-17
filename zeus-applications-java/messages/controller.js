@@ -161,7 +161,7 @@ function createKnativeService(serviceName, warUrl, bindings) {
 	                                },
 	                                {
 	                                    "name": "ARG",
-	                                    "value": "WAR_URL=https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api/read/document/download?path=" + warUrl
+	                                    "value": "WAR_URL=https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api/read/document/download?path=/" + warUrl
 	                                }
 	                            ],
 	                            "name": "kaniko-war-template"

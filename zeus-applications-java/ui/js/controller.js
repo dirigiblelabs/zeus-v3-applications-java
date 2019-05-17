@@ -1,4 +1,4 @@
-angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
+angular.module('page', ['ngAnimate', 'ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
 .config(["messageHubProvider", function(messageHubProvider) {
 	messageHubProvider.evtNamePrefix = 'zeus.Explore.Java';
 }])    
@@ -18,7 +18,58 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
 .config(["CmisProvider", function(cmisProvider) {
   cmisProvider.baseUrl = 'https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api';
 }])
-.controller('PageController', ['Entity', '$messageHub', 'Cmis', '$http', function (Entity, $messageHub, Cmis, $http) {
+.service("Service",["$http", "$q", function($http, $q) {
+    let get = function(name){
+        return $http.get('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js/'+name)
+            .then(function(response){
+                return response.data;
+            });
+    };
+    let list = function(){
+        return $http.get('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js')
+            .then(function(response){
+                return response.data;
+            });
+    };
+    let save = function(entity){
+        return $http.post('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js', entity)
+    };
+    let update = function(entity){
+        return $http.put('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js/'+entity.name, entity);
+    };
+    let remove = function(entity){
+        return $http.delete('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js/'+entity.name);
+    };
+    return {
+        get: get,
+        list: list,
+        save: save,
+        update: update,
+        delete: remove
+    }
+}])
+.service('StatusCheck',  ['$scope', '$interval', 'Service', function($scope, $interval, Service){
+    var observables = [];
+    var cancellable = $interval(function(){
+        observable.forEach(function(o){
+            if(o.status.progress<1){
+                Service.get(o.name)
+                .then(function(s){
+                    o.status = s.status;
+                });
+            }
+        });
+    }, 30*1000);
+    $scope.$on('$destroy', function () {
+        $interval.cancel(cancellable);
+    });
+    return {
+        observe: function(observableArr){
+            observables = observableArr;
+        }
+    }
+}])
+.controller('PageController', ['Service', '$interval', '$scope', '$messageHub', 'Cmis', '$http', function (Service, $interval, $scope, $messageHub, Cmis, $http) {
 
     this.dataPage = 1;
     this.dataCount = 0;
@@ -43,21 +94,37 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
     };
 
     this.loadPage = function () {
-        return Entity.query({
-		            $limit: this.dataLimit,
-		            $offset: (this.dataPage - 1) * this.dataLimit
-		        }).$promise
-		        .then(function (data) {
-	                this.dataCount = data.$count;
-	                this.dataPages = Math.ceil(this.dataCount / this.dataLimit);
-	                this.data = data;
-	            }.bind(this))
-	            .catch(function (err) {
+        Service.list()
+            .then(function(data){
+                this.data = data;
+                this.interval = $interval(function(self){
+                    self.data = Service.list();
+                }, 30*1000, this)
+                $scope.$on('$destroy', function () {
+                    $interval.cancel(this.interval);
+                }.bind(this));
+            }.bind(this))
+            .catch(function (err) {
 	               if (err.data){
 		            	console.error(err.data);
 		            }
 		            console.error(err);
 	            });
+        // return Entity.query({
+		//             $limit: this.dataLimit,
+		//             $offset: (this.dataPage - 1) * this.dataLimit
+		//         }).$promise
+		//         .then(function (data) {
+	    //             this.dataCount = data.$count;
+	    //             this.dataPages = Math.ceil(this.dataCount / this.dataLimit);
+	    //             this.data = data;
+	    //         }.bind(this))
+	    //         .catch(function (err) {
+	    //            if (err.data){
+		//             	console.error(err.data);
+		//             }
+		//             console.error(err);
+	    //         });
     };
 
     this.openNewDialog = function (entity) {
@@ -100,7 +167,7 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
 	}.bind(this);    
 	
 	var entityAction = function(action){
-		return Entity[action]({id: this.entity.id}, this.entity).$promise
+		return Service[action](this.entity)
 			 	.then(function () {
 		            this.loadPage(this.dataPage);
 		            $messageHub.messageEntityModified();
@@ -151,10 +218,11 @@ angular.module('page', ['ideUiCore', 'ngRsData', 'ui.bootstrap','ngCmis'])
         if (path.endsWith(".war")){
             path = path.substring(0, path.length-4);
         }
-        if (this.entity.warFileName == 'ROOT'){
+        if (path == 'ROOT'){
             path ="";
+        } else {
+            path = "/" + path;
         }
-        path = "/" + path;
         return [
             "http://"+ this.entity.name + ".apps.onvms.com"+ path,
             "http://"+ this.entity.name + ".zeus.apps.onvms.com"+ path,

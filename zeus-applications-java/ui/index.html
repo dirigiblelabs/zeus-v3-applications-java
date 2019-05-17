@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="page">
+
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -26,14 +27,18 @@
 					<th class="text-capitalize">Last Modified Date</th>
 					<th class="text-capitalize">Created By</th>
 					<th></th>
+					<th></th>
 				</tr>
 			</thead>
 			<tbody>
-				<tr ng-repeat="next in pageCtrl.data">
-					<td>{{next.name}}</td>
+				<tr ng-repeat="next in pageCtrl.data track by $index">
+					<td>
+						<a href="#" target="_blank" ng-href="http://{{next.address}}">{{next.name}}</a>
+					</td>
 					<td>{{pageCtrl.parseDate(next.createTime) | date: 'medium'}}</td>
 					<td>{{pageCtrl.parseDate(next.lastModifiedTime) || pageCtrl.parseDate(next.createTime) | date: 'medium'}}</td>
-					<td>{{next.user}}</td>
+					<td>{{next.creator||next.knCreator}}</td>
+					<td><i ng-show="next.status.progress < 1" class="fa fa-gear fa-spin fade-out" style="font-size:1.4em" title="Hold tight! We're getting the application ready for you..."></i></td>
 					<td>
 						<i class="close fa fa-remove" ng-click="pageCtrl.openDeleteDialog(next)" style="font-size: 1.4em"></i>
 						<i class="close fa fa-bars" ng-click="pageCtrl.openNewDialog(next)" style="margin-right: 0.5em; font-size: 1.4em"></i>
@@ -47,12 +52,12 @@
 		<div class="modal-dialog" role="document">
 			<div class="modal-content">
 				<div class="modal-header">
-					<div class="col-sm-8">
+					<div class="col-sm-11">
 						<h3 ng-show="pageCtrl.actionType === 'new'" class="modal-title" id="createEntityLbl">Create Java Web Application</h3>
 						<h3 ng-show="pageCtrl.actionType === 'update'" class="modal-title" id="updateEntityLbl">Update Java Web Application</h3>
-						<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete Java Web Application</h3>
-						<small ng-show="pageCtrl.entity.id" style="display:block; margin-top: 10px;">Created: {{pageCtrl.parseDate(pageCtrl.entity.createTime) | date: 'medium'}} by <span  ng-bind="pageCtrl.entity.user"></span></small>
-						<small ng-show="pageCtrl.entity.id">Last Modified: {{pageCtrl.parseDate(pageCtrl.entity.lastModifiedTime) || pageCtrl.parseDate(pageCtrl.entity.createTime) | date: 'medium'}} by <span  ng-bind="pageCtrl.entity.user"></span></small>
+						<h3 ng-show="pageCtrl.actionType === 'delete'" class="modal-title" id="deleteEntityLbl">Delete Java WebApplication</h3>
+						<small ng-show="pageCtrl.entity.creator || pageCtrl.entity.knCreator" style="display:block; margin-top: 10px;">Created: {{pageCtrl.parseDate(pageCtrl.entity.createTime) | date: 'medium'}} by <span  ng-bind="pageCtrl.entity.creator || pageCtrl.entity.knCreator"></span></small>
+						<small ng-show="pageCtrl.entity.lastModifier || pageCtrl.entity.knLastModifier">Last Modified: {{pageCtrl.parseDate(pageCtrl.entity.lastModifiedTime) || pageCtrl.parseDate(pageCtrl.entity.createTime) | date: 'medium'}}<span ng-if="pageCtrl.entity.lastModifier || pageCtrl.entity.knLastModifier"> by {{pageCtrl.entity.lastModifier || pageCtrl.entity.knLastModifier}}</span></small>
 					</div>
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 						<span aria-hidden="true">&times;</span>
@@ -62,7 +67,8 @@
 					<form ng-hide="pageCtrl.actionType === 'delete'">
 						<div class="form-group">
 							<label>Name</label>
-							<input type="text" class="form-control" name="name" placeholder="Enter application name" ng-model="pageCtrl.entity.name">
+							<input type="text" class="form-control" name="name" placeholder="Enter application name" ng-model="pageCtrl.entity.name"
+							 ng-required pattern="[a-z]([-a-z0-9]*[a-z0-9])?">
 						</div>
 						<div class="form-group">
 							<label class="btn btn-default">
@@ -77,39 +83,29 @@
 							<input type="text" class="form-control" name="dockerFilePath" placeholder="URL of docker image to use for web application runtime" ng-model="pageCtrl.entity.dockerFilePath">
 						</div-->
 						<div class="form-group">
-							<label>Service Bidings</label>
+							<label>Service Bindings</label>
 							<small ng-if="!pageCtrl.entity.bindings || pageCtrl.entity.bindings.length===0" style="display:block;margin-bottom:0.75em">-- No service bindings --</small>
 							<div ng-if="pageCtrl.entity.bindings" ng-repeat="binding in pageCtrl.entity.bindings" style="margin-bottom: 10px;margin-bottom:0.75em">
 								<span ng-bind="binding.name"></span> for service <span ng-bind="binding.service"></span>
 								<i ng-if="pageCtrl.entity.bindings" class="close fa fa-minus" ng-click="pageCtrl.removeBinding(binding)" style="font-size: 1.4em"></i>
 							</div>
 							<div ng-controller="BindingsController as bindingCtrl" style="display: flex;flex-flow: row;justify-content: space-between;">
-								<input id="services" type="text" placeholder="Type to select service" class="form-control" ng-required pattern="[a-zA-Z0-9_]{1,65}" data-rule-alphanumeric="^\w+$" 
-										ng-model="bindingCtrl.service"
-										ng-model-options="{debounce: 500, blur: 250}"
-										typeahead-show-hint = "true"
-										typeahead-select-on-exact = "true"
-										typeahead-focus-first = "false"
-										typeahead-on-select = "bindingCtrl.onServiceSelectChange($item)"
-										typeahead-min-length = "0"
-										uib-typeahead="item as item.name for item in bindingCtrl.services"
-										style="flex: 1 1 auto">
-								<input id="bindings" type="text" placeholder="Type to select binding" class="form-control" ng-required pattern="[a-zA-Z0-9_]{1,65}" data-rule-alphanumeric="^\w+$" 
-										ng-model="bindingCtrl.binding"
-										ng-model-options="{debounce: 500, blur: 250}"
-										typeahead-show-hint = "true"
-										typeahead-select-on-exact = "true"
-										typeahead-focus-first = "false"
-										typeahead-min-length = "0"										
-										uib-typeahead="item as item.name for item in bindingCtrl.bindings"
-										style="flex: 1 1 auto">	
+								<input id="services" type="text" placeholder="Type to select service" class="form-control" ng-required pattern="[a-zA-Z0-9_]{1,65}"
+								 data-rule-alphanumeric="^\w+$" ng-model="bindingCtrl.service" ng-model-options="{debounce: 500, blur: 250}" typeahead-show-hint="true"
+								 typeahead-select-on-exact="true" typeahead-focus-first="false" typeahead-on-select="bindingCtrl.onServiceSelectChange($item)"
+								 typeahead-min-length="0" uib-typeahead="item as item.name for item in bindingCtrl.services" style="flex: 1 1 auto">
+								<input id="bindings" type="text" placeholder="Type to select binding" class="form-control" ng-required pattern="[a-zA-Z0-9_]{1,65}"
+								 data-rule-alphanumeric="^\w+$" ng-model="bindingCtrl.binding" ng-model-options="{debounce: 500, blur: 250}" typeahead-show-hint="true"
+								 typeahead-select-on-exact="true" typeahead-focus-first="false" typeahead-min-length="0" uib-typeahead="item as item.name for item in bindingCtrl.bindings"
+								 style="flex: 1 1 auto">
 								<i class="close fa fa-plus" ng-click="bindingCtrl.addBinding(pageCtrl.entity)" style="font-size: 1.4em"></i>
 							</div>
 						</div>
 						<div class="form-group" ng-if="pageCtrl.entity.name && pageCtrl.entity.warFileName">
 							<label>Access URLs:</label>
-							<span ng-if="!pageCtrl.entity.id" ng-repeat="url in pageCtrl.getAccessUrls()" ng-bind="url" style="display:block"></span>
-							<a ng-if="pageCtrl.entity.id" ng-repeat="url in pageCtrl.getAccessUrls()" ng-href="{{url}}" target="_blank" rel="noopener noreferrer" style="display:block">{{url}}</a>
+							<span ng-if="pageCtrl.entity.status.status !== 'Done'" ng-repeat="url in pageCtrl.getAccessUrls()" ng-bind="url" style="display:block"></span>
+							<a ng-if="pageCtrl.entity.status.status == 'Done'" ng-repeat="url in pageCtrl.getAccessUrls()" ng-href="{{url}}" target="_blank"
+							 rel="noopener noreferrer" style="display:block">{{url}}</a>
 						</div>
 					</form>
 					<div ng-show="pageCtrl.actionType === 'delete'">
@@ -126,21 +122,23 @@
 		</div>
 	</div>
 	<nav class="text-center">
-	    <ul class="pagination" ng-show="pageCtrl.dataPages">
-	        <li class="page-item" ng-click="previousPage()" ng-class="{disabled: dataPage == 1 ||  dataPage == dataPages}">
-	            <a class="page-link" href="#" aria-label="Previous">
-	                <span aria-hidden="true">&laquo;</span>
-	                <span class="sr-only">Previous</span>
-	            </a>
-	        </li>
-	        <li class="page-item" ng-repeat="next in pageCtrl.getPages() track by $index" ng-click="pageCtrl.loadPage($index + 1)" ng-class="{active: $index + 1 == dataPage, disabled: dataPage == dataPages}"><a class="page-link" href="#">{{$index + 1}}</a></li>
-	        <li class="page-item" ng-click="nextPage()" ng-class="{disabled: dataPage == dataPages}">
-	            <a class="page-link" href="#" aria-label="Next">
-	                <span aria-hidden="true">&raquo;</span>
-	                <span class="sr-only">Next</span>
-	            </a>
-	        </li>
-	    </ul>
+		<ul class="pagination" ng-show="pageCtrl.dataPages">
+			<li class="page-item" ng-click="previousPage()" ng-class="{disabled: dataPage == 1 ||  dataPage == dataPages}">
+				<a class="page-link" href="#" aria-label="Previous">
+					<span aria-hidden="true">&laquo;</span>
+					<span class="sr-only">Previous</span>
+				</a>
+			</li>
+			<li class="page-item" ng-repeat="next in pageCtrl.getPages() track by $index" ng-click="pageCtrl.loadPage($index + 1)" ng-class="{active: $index + 1 == dataPage, disabled: dataPage == dataPages}">
+				<a class="page-link" href="#">{{$index + 1}}</a>
+			</li>
+			<li class="page-item" ng-click="nextPage()" ng-class="{disabled: dataPage == dataPages}">
+				<a class="page-link" href="#" aria-label="Next">
+					<span aria-hidden="true">&raquo;</span>
+					<span class="sr-only">Next</span>
+				</a>
+			</li>
+		</ul>
 	</nav>
 
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/resources/jquery/2.0.3/jquery.min.js"></script>
@@ -154,11 +152,28 @@
 	<script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/1.3.3/ui-bootstrap-tpls.min.js"></script>
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-layout.js"></script>
 	<script type="text/javascript" src="../../../../../../../../services/v3/web/zeus/ui/resources/js/ui-core-ng-modules.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-file-upload/2.3.4/angular-file-upload.js"></script>	
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-file-upload/2.3.4/angular-file-upload.js"></script>
 
 	<script type="text/javascript" src="js/ng-cmis.js"></script>
 	<script type="text/javascript" src="js/ng-rs-data.js"></script>
 	<script type="text/javascript" src="js/controller.js"></script>
 
+	<style type="text/css">
+		input:ng-required:invalid,
+		input:focus:invalid {
+			border-color: red;
+		}
+
+		.fade-out.ng-hide {
+			opacity: 0;
+		}
+
+		.fade-out.ng-hide-add,
+		.fade-out.ng-hide-remove {
+			transition: all linear 0.5s;
+		}
+	</style>
+
 </body>
+
 </html>

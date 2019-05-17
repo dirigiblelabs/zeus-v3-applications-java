@@ -106,8 +106,8 @@
 						</div>
 						<div class="form-group" ng-if="pageCtrl.entity.name && pageCtrl.entity.warFileName">
 							<label>Access URLs:</label>
-							<span ng-if="pageCtrl.entity.status.status !== 'Done'" ng-repeat="url in pageCtrl.getAccessUrls()" ng-bind="url" style="display:block"></span>
-							<a ng-if="pageCtrl.entity.status.status == 'Done'" ng-repeat="url in pageCtrl.getAccessUrls()" ng-href="{{url}}" target="_blank"
+							<span ng-if="pageCtrl.entity.status.status!=='Ready'" ng-repeat="url in pageCtrl.getAccessUrls()" ng-bind="url" style="display:block"></span>
+							<a ng-if="pageCtrl.entity.status.status==='Ready'" ng-repeat="url in pageCtrl.getAccessUrls()" ng-href="{{url}}" target="_blank"
 							 rel="noopener noreferrer" style="display:block">{{url}}</a>
 						</div>
 					</form>

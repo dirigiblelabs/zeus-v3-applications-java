@@ -18,7 +18,7 @@ angular.module('page', ['ngAnimate', 'ideUiCore', 'ngRsData', 'ui.bootstrap','ng
 .config(["CmisProvider", function(cmisProvider) {
   cmisProvider.baseUrl = 'https://cmis.ingress.pro.promart.shoot.canary.k8s-hana.ondemand.com/services/v3/js/ide-documents/api';
 }])
-.service("Service",["$http", "$q", function($http, $q) {
+.service("Service",["$http", function($http) {
     let get = function(name){
         return $http.get('../../../../../../../../services/v3/js/zeus-applications-java/api/knsvc.js/'+name)
             .then(function(response){
@@ -305,6 +305,14 @@ angular.module('page', ['ngAnimate', 'ideUiCore', 'ngRsData', 'ui.bootstrap','ng
     }.bind(this);
     
     this.loadPage(this.dataPage);
+    var cancellable = $interval(function(){
+      this.loadPage(this.dataPage);
+    }.bind(this), 30*1000);
+
+    $scope.$on('$destroy', function () {
+        $interval.cancel(cancellable);
+    });
+
 }])
 .controller('BindingsController', ['$http', function($http) {
     this.services = $http.get('../../../../../../../../services/v3/js/zeus-services/api/services.js')
